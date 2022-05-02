@@ -190,7 +190,7 @@
   >
   > ![img](img/execl.png)
 
-##### Process Termination
+#### Process Termination
 
 时机
 
@@ -270,7 +270,7 @@
 
 ### Process Model Implementation
 
-##### Process Switching
+#### Process Switching
 
 <img src="img/psswitch.png" alt="img" style="zoom:67%;" />
 
@@ -455,7 +455,7 @@ Result
 
          <img src="img/xchg.png" alt="img" style="zoom:67%;" />
 
-         >**小练习：gcc用C语言嵌入汇编语言**
+         >**Exercise：gcc用C语言嵌入汇编语言**
 
     * TSL Busy Waiting缺点
 
@@ -542,7 +542,7 @@ Result
       >Result
       >
       ><img src="img/semares.png" alt="img" style="zoom:67%;" />
-  
+
       >  2个Process和Semaphore
       >
       > <img src="img/twosem.png" alt="img" style="zoom: 67%;" />
@@ -550,17 +550,17 @@ Result
       > 使用GDB调试
       >
       > <img src="img/semgdb.png" alt="img" style="zoom:67%;" />
-  
+
     * Semaphore Disadvantage
     
       >**实现在Kernel Space**，生成和消除代价高
     
   * Mutex: Simplified Semaphore
-  
+
     >**实现在User Space**
-  
+
     Pthread Calls
-  
+
     | Thread call           | Description                 |
     | --------------------- | --------------------------- |
     | Pthread_mutex_init    | Create a mutex              |
@@ -568,18 +568,18 @@ Result
     | Pthread_mutex_lock    | Acquire a lock or **block** |
     | Pthread_mutex_trylock | Acquire a lock or **fail**  |
     | Pthread_mutex_unlock  | Release a lock              |
-  
+
     Example
-  
+
     ![img](img/mutexex.png)
-  
+
   * Mutex, Semaphore区别
-  
+
     * 量级
     * **Mutex进程完了就没了，除非塞到Share Memory**
-  
+
   * Mutex Implementation in ASM
-  
+
     ```assembly
     mutex lock:
         TSL REGISTER,MUTEX 				 ; copy mutex to register and set mutex to 1
@@ -592,6 +592,519 @@ Result
         MOVE MUTEX,#0 					 ; store a 0 in mutex
         RET 							; return to caller
     ```
-  
+
+  * Mutex Other: Conditional Variables
+
+    ![img](img/cdvb.png)
+
+    ![img](img/cdvb2.png)
+
+  * Monitor
+
+    >**Semaphore problem: easy to <u>deadlock</u>**
+    >
+    >What is Dead lock?
+    >
+    >![img](img/ddlk.png)
+    >
+    >结论：
+    >
+    >​	**使用Semaphore要小心**
+
+    Solution: High level abstraction
+
+    >A monitor is **a collection of procedures, variables, and data structures** that are all **grouped together** in a special kind of module or package. Processes may call the procedures in a monitor whenever they want to, but they **can't directly access the monitor's internal data structures** from procedures declared outside the monitor.
+
+    **Monitor Important Feature**
+
+    > Only one process can be active *in a monitor* at any instant.
+
+    Example - Pascal语言
+
+    ```pascal
+    monitor example
+    	integer i;
+    	condition c;
+    	
+    	procedure producer();
+    	.
+    	.
+    	.
+    	end;
+    	
+    	procedure consumer();
+    	.
+    	end;
+    end monitor;
+    ```
+
+    Monitor - Pseudo Pascal
+
+    ```pascal
+    monitor ProducerConsumer
+        condition full, empty;
+        integer count;
+        
+        procedure insert(item: integer);
+        begin
+            if count = N then wait(full);
+            insert item(item);
+            count := count + 1;
+            if count = 1 then signal(empty)
+        end;
+        
+        function remove: integer;
+        begin
+            if count = 0 then wait(empty);
+            remove = remove item;
+            count := count − 1;
+            if count = N − 1 then signal(full)
+        end;
+        
+        count := 0;
+    end monitor;
     
+    procedure producer;
+    begin
+        while true do
+        begin
+            item = produce item;
+            ProducerConsumer.insert(item)
+        end
+    end;
+    
+    procedure consumer;
+    begin
+        while true do
+        begin
+            item = ProducerConsumer.remove;
+            consume item(item)
+    	end
+    end;
+    ```
+
+    Monitor - Java(synchronized)
+
+    ```java
+    public class ProducerConsumer {
+        static final int N = 100; 						// constant giving the buffer size
+        static producer p = new producer( ); 			 // instantiate a new producer thread
+        static consumer c = new consumer( );			 // instantiate a new consumer thread
+        static our monitor mon = new our monitor( );	  // instantiate a new monitor
+        
+        public static void main(String args[]) {
+            p.start(); 									// start the producer thread
+            c.start(); 									// start the consumer thread
+        }
+        
+        static class producer extends Thread {
+            public void run() {						// run method contains the thread code
+                int item;
+                while (true) { 						// producer loop
+                    item = produce_item();
+                    mon.insert(item);
+                }
+            }
+            private int produce_item() { ... } 		// actually produce
+        }
+        
+        static class consumer extends Thread {
+            public void run() {					//run method contains the thread code
+                int item;
+                while (true) { 							// consumer loop
+                    item = mon.remove();
+                    consume_item (item);
+                }
+            }
+            private void consume_item(int item) { ... }	// actually consume
+        }
+        
+        static class our monitor { 						// this is a monitor
+            private int buffer[] = new int[N];
+            private int count = 0, lo = 0, hi = 0; 		 // counters and indices
+            public synchronized void insert(int val) {
+                if (count == N) go to sleep( ); 	 // if the buffer is full, go to sleep
+                buffer [hi] = val; 					// inser t an item into the buffer
+                hi = (hi + 1) % N; 					// slot to place next item in
+                count = count + 1; 					// one more item in the buffer now
+                if (count == 1) notify();			 // if consumer was sleeping, wake it up
+        	}
+            
+            public synchronized int remove() {
+                int val;
+                if (count == 0) go to sleep(); 		// if the buffer is empty, go to sleep
+                val = buffer [lo]; 					// fetch an item from the buffer
+                lo = (lo + 1) % N; 					// slot to fetch next item from
+                count = count − 1;					 // one few items in the buffer
+                if (count == N − 1) notify(); 		// if producer was sleeping, wake it up
+                return val;
+            }
+            private void go_to_sleep( ) { 
+                try{wait( );} catch(Interr uptedException exc) {};}
+            }
+    }
+    ```
+
+  * Message Passing
+
+    Monitor Disadvantage
+
+    >Monitor之间也需要互斥，因为管程也是一个编程语言概念，**编译器必须要识别管程并用某种方式对其互斥进行安排**。但实际中，**如何让编译器知道哪些过程属于管程，哪些不属于？**
+    >
+    >如果一个分布式系统具有多个CPU，并且每个CPU拥有自己的私有内存，他们通过一个局域网相连，那么，这些原语将失效。这里的结论是：Semaphore太低级了，而管程在少数几种编程语言之外又无法使用，并且，这些原语均未提供机器间的信息交换方法，所以还需要其他的方法——Message Passing
+    >
+    >即，Monitor，Semaphore, Mutex解决的也都是一台电脑内部的Process, Thread互斥，没解决多台电脑合作时的互斥
+
+    Message Passing System Call
+
+    * 像Semaphore而不像Monitor，是系统调用而不是语言成分
+
+      > Message Passing使用两条原语来实现**进程**间通信
+      >
+      > ```c
+      > send(destination, &message);
+      > receive(source, &message);
+      > ```
+
+    * Example
+
+      ```c
+      #define N 100							/*number of slots in the buffer*/
+      void producer(void)
+      {
+          int item;
+          message m; 							/*message buffer*/
+          while (TRUE) {
+              item = produce item( );			 /*generate something to put in buffer*/
+              receive(consumer, &m); 			 /*wait for an empty to arrive*/
+              build message(&m, item); 		 /*constr uct a message to send*/
+              send(consumer, &m);				 /*send item to consumer*/
+          }
+      }
+      void consumer(void)
+      {
+          int item, i;
+          message m;
+          for (i = 0; i < N; i++) send(producer, &m); 	  /*send N empties*/
+          while (TRUE) {
+              receive(producer, &m); 						/*get message containing item*/
+              item = extract item(&m); 					/*extract item from message*/
+              send(producer, &m); 						/*send back empty reply*/
+              consume item(item); 						/*do something with the item*/
+          }
+      }
+      ```
+
+  * Barriers
+
+    用于一组Process同步
+
+    <img src="img/barrier.png" alt="img" style="zoom:67%;" />
+
+## Scheduling
+
+* 用于所有Process之间(之前的IPC是两个或几个Process之间)
+
+### Problem
+
+* **一些Process已经就绪，哪个该放到CPU上跑呢？**
+* **调度为何不是时时刻刻发生，而是有间隔的发生？**
+
+### When to Schedule?
+
+* Process creation
+* Process exit
+* Process blocks on I/O
+* I/O interrupt (**比如网络包到了，会发一个中断，运行接包的Process**)
+
+### Scheduling Algorithm
+
+>Category
+>
+>1. Preemptive vs Non-Preemptive
+>
+>2. Batch
+>
+>>批处理任务执行的好，就是
+>>
+>>* Throughput(吞吐量) -> Max
+>>* Turnaround time -> Min
+>>* CPU utilization(利用率) -> Max
+>
+>3. Interactive
+>
+>4. Real time
+>
+>Ps
+>
+>* Throughput - the number of processes that complete their execution per time unit
+>* Turnaround time - the interval from submission to completion
+>* Waiting time - amount of time a process has been waiting in the ready queue
+>* Response time - amount of time it takes from when a request was submitted unitl the first response is produced, not output (for time-sharing environment)
+
+#### FCFS Example
+
+| Process | Burst Time |
+| ------- | ---------- |
+| P1      | 24         |
+| P2      | 3          |
+| P3      | 3          |
+
+Arrive order: P1, P2, P3
+
+解决思路：画Gannt Chart
+
+<img src="img/fcfsgc.png" alt="img" style="zoom:50%;" />
+
+Turnaround time for
+
+> P1 = 24; P2 = 27; P3 = 30
+
+Average turnaround time
+
+> (24 + 27 + 30) / 3 = 27
+
+#### SJF Example(Non Preemptive)
+
+| Process | Arrival Time | Burst Time |
+| ------- | ------------ | ---------- |
+| P1      | 0.0          | 7          |
+| P2      | 2.0          | 4          |
+| P3      | 4.0          | 1          |
+| P4      | 5.0          | 4          |
+
+* 因为P1先到，到的时候P2, P3, P4还没来，所以先P1
+* P1完事，此时，P2, P3, P4都来了，选最短的P3先来
+
+Gannt Chart
+
+<img src="img/sjfnpgc.png" alt="img" style="zoom:50%;" />
+
+Average turnaround time
+
+>[(7 - 0) + (8 - 4) + (12 - 2) + (16 - 5)] / 4 = 8
+
+#### SJF Example(Preemptive)
+
+| Process | Arrival Time | Burst Time |
+| ------- | ------------ | ---------- |
+| P1      | 0.0          | 7          |
+| P2      | 2.0          | 4          |
+| P3      | 4.0          | 1          |
+| P4      | 5.0          | 4          |
+
+* P1先来，2s后，P2来了，P1还剩5s，但是P2只用4s，所以先P2
+* P2运行2s后，P3又来了，此时P1->5s, P2->2s, P3->1s, 所以P3
+* 1s后，P3完事，P4来，此时P2->2s, P1->5s, P4->4s，所以先P2, 后P4，最后P1
+
+Gannt Chart
+
+<img src="img/sjfpgc.png" alt="img" style="zoom:50%;" />
+
+Average turnaround time
+
+>[(16 - 0) + (7 - 2) + (5 - 4) + (11 - 5) / 4]  = 7
+
+### Interactive System Scheduling
+
+#### Round Robin
+
+<img src="img/rr.png" alt="img" style="zoom:67%;" />
+
+#### Priority Scheduling
+
+<img src="img/prioritysc.png" alt="img" style="zoom:67%;" />
+
+#### Multiple Queue
+
+<img src="img/mqueue.png" alt="img" style="zoom:67%;" />
+
+#### Guaranteed Scheduling
+
+若Process已经Ready，保证10s内能运行1s
+
+> He gives you a "promise" and make sure he will keep it.
+>
+> * Example
+>   * Promise: n processes in system, each will get 1/n CPU time
+>   * Resource Reservation Scheduling Algorithms
+
+**应用：花多少米，得多少时间**
+
+#### Lottery Scheduling
+
+* Give processes lottery tickets for various system resources, such as CPU time
+* Whenever a scheduling decision has to be made, a lottery ticket is chosen at random, and **the process holding that ticket gets the resource**
+
+#### Fair-Share Scheduling(FSS)
+
+* 可以看做Guaranteed Scheduling的特例
+* A和B交一样钱，但是A有10000000个Process，B就1个，则CPU全被A给抢了，那么就要保证A和B不管有几个Process，CPU时间都要平分
+
+#### Real-Time Scheduling
+
+* Hard Real-Time：必须在时限前搞定(**飞机计算，否则飞机炸**)
+* Soft Real-Time：可以通融(**网络视频，卡了还行**)
+
+### Schedulable
+
+>可调度序列
+>
+>There's existed one scheduling sequence that make **every process** meet their deadline
+
+### Policy Versus Mechanism
+
+Separate the scheduling mechanism from the scheduling policy
+
+* Key Idea: User can decide which scheduling algorithm is to use
+
+* Scheduling algorithm is parameterized in some way, but the parameters can be filled in by user processes
+
+  > **Exercise: 把Thread绑到CPU的一个核上(Linux)**
+
+### Thread Scheduling
+
+| Implementation in: | Kernel Space | User Space                      |
+| ------------------ | ------------ | ------------------------------- |
+| Cost               | Big          | Small                           |
+| Other              | /            | 可实现应用特定Scheduler，效果好 |
+
+## Classical IPC Problems
+
+### Dining Philosophers Problem
+
+* 哲学家：吃/思考
+* 吃需要2个fork
+* 一次拿一个fork
+* 解决问题，还要防止deadlock
+
+A wrong solution - may cause deadlock
+
+```c
+#define N 5 								/*number of philosophers*/
+void philosopher(int i) 					 /*i: philosopher number, from 0 to 4*/
+{
+    while (TRUE) {
+        think(); 							/*philosopher is thinking*/
+        take fork(i); 						/*take left for k*/
+        take fork((i+1) % N); 				 /*take right for k; % is modulo operator*/
+        eat(); 								/*yum-yum, spaghetti*/
+        put fork(i); 						/*put left for k back on the table*/
+        put fork((i+1) % N); 				 /*put right for k back on the table*/
+    }
+}
+```
+
+**如果5个人都拿左边的fork，全部sleep -> deadlock**
+
+解决：引入中控
+
+<img src="img/eatf.png" alt="img" style="zoom:67%;" />
+
+> IPC Design
+>
+> * Prevent deadlock
+> * 尽量多并发
+
+### Readers and writers Problem
+
+<img src="img/raw.png" alt="img" style="zoom:80%;" />
+
+**如果有读者，那么读者随便进，写者不能进，因为后来的读者，rc != 1，不会走down(&db)这句话**
+
+### Sleeping Barber
+
+* 理发店里有一位理发师、一把理发椅和n把供等候理发的顾客坐的椅子
+* 如果没有顾客，理发师便在理发椅上睡觉
+* 一个顾客到来时，它必须叫醒理发师
+* 如果理发师正在理发时又有顾客来到，则如果有空椅子可坐，就坐下来等待，否则就离开
+
+```c
+#define CHAIRS 5               /* # chairs for waiting customers */
+typedef int semaphore;         /* use your imagination */
+semaphore customers = 0;       /* # of customers waiting for service */
+semaphore barbers = 0;         /* # of barbers waiting for customers */
+semaphore mutex = 1;           /* for mutual exclusion */
+
+//critical region
+int waiting = 0;               /* customers are waiting (not being cut) */
+ 
+void barber(void){
+    white (TRUE) {
+        /**
+        * 没有顾客，睡觉；
+        * 有顾客，down完还要接着剪
+        */
+        down(&customers);      /* go to sleep if # of customers is 0 */
+        
+        /* 若能执行到这儿，waiting肯定被加了 */
+        down(&mutex);          /* acquire access to 'waiting' */
+        waiting = waiting − 1; /* decrement count of waiting customers */
+        up(&barbers);          /* one barber is now ready to cut hair */
+        up(&mutex);            /* release 'waiting' */
+        
+        cut_hair();            /* cut hair (outside critical region) */
+    }
+}
+ 
+void customer(void){
+    down(&mutex);              /* enter critical region */
+    if (waiting < CHAIRS) {    /* if there are no free chairs, leave */
+        
+        //抢椅子
+        waiting = waiting + 1; /* increment count of waiting customers */
+        
+        up(&customers);        /* wake up barber if necessary */
+        up(&mutex);            /* release access to 'waiting' */
+        down(&barbers);        /* go to sleep if # of free barbers is 0 */
+        get_haircut();         /* be seated and be serviced */
+    } else {
+        //椅子满，走人
+        up(&mutex);            /* shop is full; do not wait */
+    }
+}
+```
+
+### Driver and  Seller
+
+原则
+
+* IPC -> 同步，互斥，同步互斥
+* 同步：semaphore初值为0，需要等别人的进程要p操作，被别人等的进程要v操作
+* 互斥：semaphore初值为进程数量
+
+```c
+//司机和售票员问题
+Semaphore driver = 0, door = 0;
+
+/*
+ 司机的活动：启动车辆，正常行车，到站停车
+ 售票员的活动：关车门，售票，开车门
+ 	注意：当发车时间到，售票员关门后司机才能开车，售票员开始售票；
+ 	到站时，司机停车后，售票员才能打开车门
+*/
+Driver(){
+    /* 要等售票员关门后才能开车，等别人 */
+    P(drive);
+    
+    Drive();
+    CarMove();
+    Stop();
+    
+    /* 停车后允许售票员开门 */
+    V(door);
+}
+
+Ticket_Seller(){
+    DoorClose();
+    
+    /* 关门后允许司机开车 */
+    V(drive);
+    SellTicket();
+    
+    /* 要等司机停车后才能开门，等别人 */
+    P(door);
+    DoorOpen();
+}
+```
 
