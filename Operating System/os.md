@@ -140,16 +140,16 @@
   > #include <unistd.h>
   > #include <stdio.h>
   > int main(){
-  >     pid_t pid;
-  >     pid = fork();
+  >    	pid_t pid;
+  >    	pid = fork();
   >     
-  >     if(pid == 0){
-  >         sleep(1);
-  >         printf("Kylin\n");
-  >     }
+  >        if(pid == 0){
+  >            sleep(1);
+  >            printf("Kylin\n");
+  >        }
   >     
-  >     sleep(1);
-  >     printf("My Favorite\n");
+  >        sleep(1);
+  >        printf("My Favorite\n");
   > }
   > ```
   >
@@ -208,13 +208,13 @@
   >#include <unistd.h>
   >#include <stdio.h>
   >int main(){
-  >    char* p;
-  >    p = 0x0;
-  >    *p = 'a';
-  >    while(1){
-  >        sleep(1);
-  >        printf("haha\n");
-  >    }
+  >        char* p;
+  >        p = 0x0;
+  >        *p = 'a';
+  >        while(1){
+  >            sleep(1);
+  >            printf("haha\n");
+  >        }
   >}
   >```
   >
@@ -543,13 +543,13 @@ Result
       >
       ><img src="img/semares.png" alt="img" style="zoom:67%;" />
 
-      >  2个Process和Semaphore
-      >
-      > <img src="img/twosem.png" alt="img" style="zoom: 67%;" />
-      >
-      > 使用GDB调试
-      >
-      > <img src="img/semgdb.png" alt="img" style="zoom:67%;" />
+  2个Process和Semaphore
+  
+  <img src="img/twosem.png" alt="img" style="zoom:67%;" />
+  
+  使用GDB调试
+  
+  <img src="img/semgdb.png" alt="img" style="zoom:67%;" />
 
     * Semaphore Disadvantage
     
@@ -1107,4 +1107,606 @@ Ticket_Seller(){
     DoorOpen();
 }
 ```
+
+## Memory Management
+
+### MM Overview
+
+#### **What will happen if no Memory Abstraction?**
+
+<img src="img/noma.png" alt="img" style="zoom:67%;" />
+
+#### **How to solve?**
+
+Propose an Abstract Concept - **Address Space**
+
+> **Each process have its own space, whose address starts at  0**
+
+Implementation: Use **Static relocation(静态重定位)**
+
+> 若一个Process装在16384号上，则该程序的每一个程序地址加上16384，则1号就是16385
+>
+> **Static relocation Problem**
+>
+> ![img](img/sr.png)
+
+#### **Memory Abstraction**
+
+Solution of Static relocation Problem -> **Dynamic**
+
+How to implement address space?
+
+> **Base register + Limit register**
+
+**Base and Limit Registers**
+
+<img src="img/dyrc.png" alt="img" style="zoom:60%;" />
+
+Proplems all solved?
+
+* No!!!
+  * <u>What to do if we **have not enough memory when running multiple programs?**</u>
+
+Use Swap
+
+> Swap
+>
+> *Bringing in each process in its entirety, running it for a while, then putting it back on the disk*
+
+<img src="img/swap.png" alt="img" style="zoom:67%;" />
+
+Swap Problem
+
+产生空洞(hole, Fragment, 即上图中的阴影)，消掉要把所有Process向下移动(downward)，称为Memory Compaction(内存紧缩)，但是这样做会**浪费CPU时间**
+
+Another Problem
+
+* Dynamic relocation Problem
+
+  <img src="img/drp.png" alt="img" style="zoom:60%;" />
+
+#### Free Space Management(**Dynamic**)
+
+* bit map & list
+
+  <img src="img/bl.png" alt="img" style="zoom:60%;" />
+
+* 对于list的升级：List Management
+
+  当X结束时，更改List
+
+  <img src="img/gglist.png" alt="img" style="zoom:60%;" />
+
+* Four methods to insert A new Process
+
+  1. First Fit: 找第一个合适的洞
+  2. Next Fit: **slightly worse than First Fit**
+  3. Best Fit: **比First Fit慢，比First Fit和Next Fit浪费内存，产生大量小空闲区**
+  4. Worst Fit: 选最大的洞
+
+  >As an example of first fit and best fit, consider example forward again. If a block of size 2 is needed, first fit will allocate the hole at 5, but best fit will allocate the hole at 18
+
+### Virtual Memory
+
+Problem
+
+* If program is too large, bigger than main memory, what will happen?
+* Swap --- Address in program may need modification when swapping
+
+How to solve this Problem?
+
+* **Virtual Memory?**
+
+  > * Each program has **its own address space**, which is broken up into chunks called pages.
+  > * Pages can be swapped out
+
+MMU
+
+<img src="img/mmu.png" alt="img" style="zoom:60%;" />
+
+An Example
+
+> 2个Process，都定义变量a，一个a是1，一个a是2，打印a的地址，发现地址相同，但是值明明不同
+>
+> -> **Virtual Address**
+
+Why introduce Virtual Address?
+
+1. 把进程地址空间分离，防止程序之间地址被共用或恶意攻击
+2. 内存效率原来很低，会大量swap，现在swap就少了
+3. 原来swap回来的Process的地址总是变
+
+#### **Paging**
+
+<img src="img/paging.png" alt="img" style="zoom:67%;" />
+
+#### **Virtual Address Translation**
+
+<img src="img/vat.png" alt="img" style="zoom:67%;" />
+
+假设虚拟地址64KB，物理地址32KB，4KB一个Page，则虚拟16Page，物理8Page
+
+* 要翻译：0010 0000 0000 0100 (16bit)
+
+  1. 除以4KB -> 2^12B并向下取整：
+
+     > **也就是去掉末尾12位，只留前4位**
+     >
+     > 0010 -> VPage号，也就是2号VPage
+     >
+     > 其中的PPage：110 -> 6号
+
+  2. 算虚拟地址的位置与虚拟页面(起始位置)的偏移量：
+
+     > <img src="img/vat2.png" alt="img" style="zoom: 50%;" />
+     >
+     > 则最终物理地址：<u>110</u> <u>0000 0000 0100</u>
+     >
+     > ​							   ^              ^
+     >
+     > ​						  PPage6    偏移量
+
+**Page Table Entry**
+
+<img src="img/pta.png" alt="img" style="zoom:60%;" />
+
+加速分页
+
+* TLB：转换检测缓冲区(Translation Lookaside Buffer)
+
+  > 计算机的一个小型硬件设备，**将虚拟地址直接映射到物理地址，<u>而不必再访问页表</u>**，这种设备成为转换检测缓冲区(Translation Lookaside Buffer, TLB)，又称相联存储器(associate memory)，或快表，**通常在MMU中**，包含少量的表项
+  >
+  > <img src="img/tlb.png" alt="img" style="zoom:50%;" />
+
+Multilevel Page Tables
+
+<img src="img/mpt.png" alt="img" style="zoom:50%;" />
+
+Inverted Table
+
+<img src="img/ip.png" alt="img" style="zoom:60%;" />
+
+> 区别
+>
+> * 普通Page Table每一个Process一张
+> * Inverted Table全局就一张
+
+#### Page Replacement Algorithms
+
+Page Fault: 缺页中断(**Abscent位**)
+
+* Optimal Page Replacement
+
+  > 替换最久才会用到的Page，则Page Fault最少，抖动最小
+
+  Ex: 内存访问序列：0 1 3 2 2 5 3 4 2 1，3个物理Page，计算Page Fault数
+
+  <img src="img/opr.png" alt="img" style="zoom:60%;" />
+
+  PS：**这里的页面号都是虚拟的！！！**
+
+  缺点：不可实现
+
+* Least Recently Used(LRU)
+
+  Ex: 内存访问序列：0 1 3 2 2 5 3 4 2 1，3个物理Page，计算Page Fault数
+
+  <img src="img/lru.png" alt="img" style="zoom:60%;" />
+
+  LRU另一种图解
+
+  <img src="img/lruan.png" alt="img" style="zoom:60%;" />
+
+  使用硬件模拟LRU
+
+  <img src="img/lruhd.png" alt="img" style="zoom:67%;" />
+
+  硬件模拟缺点：管理成本巨大，Matrix太大
+
+  近似LRU: NFU(Not Frequently Used)
+
+  > 要个计数器，每个时钟中断，扫描所有Page，查每一个Page的R位，把R位值(0或1)加到计数器上，每次替换计数最少的
+
+  NFU缺点
+
+  * 在2个时钟中断之间，某个Page可能已经被访问多次
+  * **It never forgets anything**
+
+  NFU改进：Let it forget!
+
+  <img src="img/lif.png" alt="img" style="zoom:60%;" />
+
+* NRU(Not Recently Used)
+
+  * 使用R位和M位
+
+  * 定期清零R位：最近没被访问过
+
+  * M位不清零：假设1个Page要被换出去，**M位是0，表示<u>从磁盘加载进来后再也没改动过</u>，因此只需要释放掉再加新的；若是1，<u>则应先刷到磁盘上保存修改</u>**，然后才能换新的Page，这时候M位才能清零
+
+  * 经过以上操作，所有Page被分为4类
+
+    1. R = 0, M = 0 -> Not refferenced, not modified
+
+    2. R = 0, M = 1 -> Not refferenced, modified
+
+    3. R = 1, M = 0 -> Refferenced, not modified
+
+    4. R = 1, M = 1 -> Refferenced, modified
+
+       **从上到下，<u>被替换</u>优先级降低**
+
+* Clock Page Replacement
+
+  <img src="img/cpr.png" alt="img" style="zoom:50%;" />
+
+  > 为什么R位要Clear?
+  >
+  > 如果不Clear，那早晚所有的Page都会满
+
+* Working Set Page Replacement
+
+  Working Set：干什么事，访问的Page基本是固定的
+
+  思想：替换那些**不是我干这件事儿时**访问的Page
+
+  但是，OS不知道你经常访问哪些Page
+
+  推测
+
+  <img src="img/wspr.png" alt="img" style="zoom:67%;" />
+
+* WSClock = Clock + Working Set
+
+  <img src="img/wscpr.png" alt="img" style="zoom:60%;" />
+
+* FIFO(First in First out)
+
+  想象一个Stack，栈**底**的是最早访问的，替换它
+
+  Disadvantage：随着内存增加，Page Fault数不降反生(**命中率低**)
+
+* 改进FIFO: Second Chance
+
+  <img src="img/sc.png" alt="img" style="zoom:60%;" />
+
+  > 栈底的元素的R位如果是
+  >
+  > * 0：拍死，换出去
+  > * 1：再给次机会，放到栈顶
+
+### Design Issues
+
+#### Local & Global
+
+<img src="img/lg.png" alt="img" style="zoom:60%;" />
+
+> **Age: 上次访问的时刻，越小表示越久没用了**
+
+#### Page Fault Frequency(PFF)
+
+<img src="img/pff.png" alt="img" style="zoom:60%;" />
+
+> Page Fault越多，Page分配越多
+>
+> **前提(Precondition)：当前Process的Working Set不超过Memory Size，不然也没法儿多分Page，对吧！**
+>
+> 多分的Page肯定不是自己的，所以PFF建立在Global Replacement上
+
+#### Thrashing
+
+一个Page刚被换出去，又要被访问，就又被换回来，然后又出去又回来……
+
+Solution：加内存！
+
+但是，要是没米捏？
+
+* Reduce number of processes competing for memory
+
+  > **原来5个Process同时，现在3个……**
+
+* Swap one or more to disk, divide up pages they held
+
+* Clean Policy：加速，降Page Fault
+
+  > Page Fault数是命中率的指标 —— Spread Zhao
+
+  不要等内存脏页满了才将脏页刷到磁盘上
+
+  > **比如，保证任何时可都有10%free pages**
+
+* **Page Size**
+
+  当Page Size大了，Page Table就小，更好管理，但太大，一个Page Table浪费得多了
+
+  为进程分配最优Page Size
+
+  * s: 进程平均大小
+  * p: 一个Page大小
+  * 则s/p：一个Process要几个Page
+  * **e：一个Page Table Entry大小**
+  * 则se/p：一个Process**在内存中实现的大小**
+  * p/2：在最后一个Page通常占不满
+
+  则Overhead(开销) = se/p + p/2
+
+  > **比如s = 10KB，一个Page4KB，e为4B，那么se/p + p/2 = 8B + 2KB，有必要？**
+  >
+  > 上面的疑惑，主要是因为s并不是10KB，是经过好多测量得出来的
+  >
+  > **se/p近似为Page Table大小**，p/2这个开销虽然是在Virtual Address Space中的浪费，但是**每个虚拟地址还是映射一个实际的物理地址啊**！比如s还是10KB，但Page若分成1个GB，那仅用1个Page Table Entry(4B)就能表示这10KB的程序，但是，**那些剩下的Page Table中的地方，还映射着物理地址，并且永远也不会被用到**
+  >
+  > 因此，Overhead可以写成
+  >
+  > Overhead = Page Table大小 + 浪费的虚拟地址的个数
+  >
+  > ​				 = Page Table大小 + 浪费的**物理**地址的个数
+  >
+  > ​				 =          se/p           +			   p/2
+  >
+  > p/2的计算：
+  >
+  > 一个Page有P个地址，从全空到全满，有P+1种情况，则等概率分布，期望
+  >
+  > E = [1 / (p + 1)] * (0 + 1 + ... + p) = p/2
+  >
+  > *问题：为什么se/p不判一下s/p的余数是否为0*
+
+  之后，将Overhead两边对p求导，求出p(optimise) = 根号下2se
+
+  **当s = 1MB，e = 8B时，算出p = 4KB**
+
+#### Increase Address Space
+
+如果内存足够大，Single address Space就够了
+
+<img src="img/sas.png" alt="img" style="zoom:60%;" />
+
+但是不够咋办？
+
+比如16位机子上，分成了Ispace，Dspace
+
+<img src="img/isds.png" alt="img" style="zoom:67%;" />
+
+这样，一个Process有2个Page Table，分别在要翻译的时候对应自己的，这样变向扩大了内存(**运用Dynamic relocation**)
+
+#### Shared Memory
+
+* Create: shmget
+
+  <img src="img/shmget.png" alt="img" style="zoom:60%;" />
+
+  > 查看：**ipcs**
+
+* Write: shmat(Shared Memory Attach)
+
+  <img src="img/shmat.png" alt="img" style="zoom:60%;" />
+
+* Read
+
+  <img src="img/shmrd.png" alt="img" style="zoom:67%;" />
+
+#### Shared Library
+
+* Shared Memory -> Data Share
+* Shared Library -> Code Share
+
+<img src="img/sl.png" alt="img" style="zoom:60%;" />
+
+**注：编译时，库里的应是<u>相对地址</u>**
+
+<img src="img/sl2.png" alt="img" style="zoom:60%;" />
+
+> **Exercise: c + gcc -> Shared Library**
+
+#### Mapped Files
+
+> Mapped files provide an alternative model for I/O. Instead of doing reads and writes, the file can be accessed as a big character array in memory. In some situations, programmers find this model more convenient.
+
+Advantage
+
+* 不用调函数，指针更灵活
+* 不用为每个Process创建Buffer
+
+普通访问File
+
+<img src="img/fwfile.png" alt="img" style="zoom:60%;" />
+
+> 不能像指针一样在File中来回跳
+
+使用Mapped File
+
+```c
+#include "stdio.h"
+#include "unistd.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <string.h>
+
+int main()
+{
+	int fd;
+	void *p;
+	fd=open("haha",O_CREAT|O_RDWR,0666);
+    /**
+    * NULL：一段连续地址空间
+    * 5：文件大小5B
+    * MAP_SHARED：可共享
+    */
+	p=mmap(NULL,5,PROT_WRITE|PROT_READ,MAP_SHARED,fd,0);
+    /* 指针访问 */
+	strncpy((char*)p,"hehe\n",5);
+	munmap(p,5);
+	close(fd);
+}
+
+```
+
+补充：open函数
+
+<img src="img/open.png" alt="img" style="zoom:60%;" />
+
+运行mmap
+
+> 运行之前，首先创建一个haha文件，并使用命令：
+> 	truncate -s 5 haha
+> 将其长度改为5，否则会出错，错误名busy bus。
+
+#### Virtual Memory Interface
+
+**Linux: /proc**，看Memory Manage info
+
+proc特点：不留在磁盘上，动态生成
+
+### Implementation Issues
+
+#### Time for paging
+
+1. Process Creation
+
+   > * **Determine Program Size**
+   >
+   > * **Create Page Table**
+   >
+   > * 怎么知道程序的大小？
+   >
+   >   元信息，编译器通过编译后含在程序里(elf)
+
+2. Process execution
+
+   > * **MMU reset for new process**
+   > * **TLB flushed**
+
+3. Page Fault
+
+   > * **Determine virtual address causing fault**
+   > * **Swap target page out, needed page in**
+
+4. Terminate
+
+   > * **Release Page Table, Pages**
+
+#### RISC and CISC
+
+* RISC: Reduced Instruction Set Computers，每条Ins等长
+* CISC: Complex Instruction Set Computers，每条Ins不等长
+
+复杂指令集计算机(CISC)
+
+长期来，计算机性能的提高往往是通过增加硬件的复杂性来获得．随着集成电路技术．特别是VLSI（超大规模集成电路）技术的迅速发展，为了软件编程方便和提高程序的运行速度，硬件工程师采用的办法是不断增加可实现复杂功能的指令和多种灵活的编址方式．甚至某些指令可支持高级语言语句归类后的复杂操作．至使硬件越来越复杂，造价也相应提高．为实现复杂操作，微处理器除向程序员提供类似各种寄存器和机器指令功能外．还通过存于只读存贮器(ROM)中的微程序来实现其极强的功能 ，傲处理在分析每一条指令之后执行一系列初级指令运算来完成所需的功能，这种设计的型式被称为复杂指令集计算机(Complex
+Instruction Set Computer-CISC)结构．一般CISC计算机所含的指令数目至少300条以上，有的甚至超过500条．
+
+精简指令集计算机(RISC)
+
+采用复杂指令系统的计算机有着较强的处理高级语言的能力．这对提高计算机的性能是有益的．当计算机的设计沿着这条道路发展时．有些人没有随波逐流．他们回过头去看一看过去走过的道路，开始怀疑这种传统的做法：IBM公司没在纽约Yorktown的JhomasI.Wason研究中心于1975年组织力量研究指令系统的合理性问题．因为当时已感到，日趋庞杂的指令系统不但不易实现．而且还可能降低系统性能．1979年以帕特逊教授为首的一批科学家也开始在美国加册大学伯克莱分校开展这一研究．结果表明，CISC存在许多缺点．**首先．在这种计算机中．各种指令的使用率相差悬殊：一个典型程序的运算过程所使用的80％指令．只占一个处理器指令系统的20％．**事实上最频繁使用的指令是取、存和加这些最简单的指令．这样-来，长期致力于复杂指令系统的设计，实际上是在设计一种难得在实践中用得上的指令系统的处理器．同时．复杂的指令系统必然带来结构的复杂性．这不但增加了设计的时间与成本还容易造成设计失误．此外．尽管VLSI技术现在已达到很高的水平，但也很难把CISC的全部硬件做在一个芯片上，这也妨碍单片计算机的发展．在CISC中，许多复杂指令需要极复杂的操作，这类指令多数是某种高级语言的直接翻版，因而通用性差．由于采用二级的微码执行方式，它也降低那些被频繁调用的简单指令系统的运行速度．因而．针对CISC的这些弊病．帕特逊等人提出了精简指令的设想即指令系统应当只包含那些使用频率很高的少量指令．并提供一些必要的指令以支持操作系统和高级语言．按照这个原则发展而成的计算机被称为精简指令集计算机(Reduced Instruction Set Computer-RISC)结构．简称RISC．
+
+CISC与RISC的区别
+
+我们经常谈论有关"PC"与"Macintosh"的话题，但是又有多少人知道以Intel公司X86为核心的PC系列正是基于CISC体系结构，而 Apple公司的Macintosh则是基于RISC体系结构，CISC与RISC到底有何区别？-
+
+- **从硬件角度来看CISC处理的是不等长指令集，它必须对不等长指令进行分割，因此在执行单一指令的时候需要进行较多的处理工作。而RISC执行的是等长精简指令集，CPU在执行指令的时候速度较快且性能稳定。因此在并行处理方面RISC明显优于CISC，RISC可同时执行多条指令，它可将一条指令分割成若干个进程或线程，交由多个处理器同时执行。由于RISC执行的是精简指令集，所以它的制造工艺简单且成本低廉。**
+- 从软件角度来看，CISC运行的则是我们所熟识的DOS、Windows操作系统。而且它拥有大量的应用程序。因为全世界有65%以上的软件厂商都理为基于CISC体系结构的PC及其兼容机服务的，象赫赫有名的Microsoft就是其中的一家。而RISC在此方面却显得有些势单力薄。虽然在RISC上也可运行DOS、Windows，但是需要一个翻译过程，所以运行速度要慢许多。
+- 目前CISC与RISC正在逐步走向融合，Pentium Pro、Nx586、K5就是一个最明显的例子，它们的内核都是基于RISC体系结构的。他们接受CISC指令后将其分解分类成RISC指令以便在遇一时间内能够执行多条指令。由此可见，下一代的CPU将融合CISC与RISC两种技术，从软件与硬件方面看二者会取长补短。
+- 复杂指令集CPU内部为将较复杂的指令译码，也就是指令较长，分成几个微指令去执行，正是如此开发程序比较容易（指令多的缘故），但是由于指令复杂，执行工作效率较差，处理数据速度较慢，PC 中 Pentium的结构都为CISC CPU。
+- RISC是精简指令集CPU，指令位数较短，内部还有快速处理指令的电路，使得指令的译码与数据的处理较快，所以执行效率比CISC高，不过，必须经过编译程序的处理，才能发挥它的效率，我所知道的IBM的 Power PC为RISC CPU的结构，CISCO 的CPU也是RISC的结构。
+- 咱们经常见到的PC中的CPU，Pentium-Pro（P6）、Pentium-II,Cyrix的M1、M2、AMD的K5、K6实际上是改进了的CISC，也可以说是结合了CISC和RISC的部分优点。
+- RISC与CISC的主要特征对比
+  比较内容 CISC RISC
+  指令系统 复杂，庞大 简单，精简
+  指令数目 一般大于200 一般小于100
+  指令格式 一般大于4 一般小于4
+  寻址方式 一般大于4 一般小于4
+  指令字长 不固定 等长
+  可访存指令 不加限制 只有LOAD/STORE指令
+  各种指令使用频率 相差很大 相差不大
+  各种指令执行时间 相差很大 绝大多数在一个周期内完成
+  优化编译实现 很难 较容易
+  程序源代码长度 较短 较长
+  控制器实现方式 绝大多数为微程序控制 绝大多数为硬布线控制
+  软件系统开发时间 较短 较长
+
+#### Instruction Backup
+
+<img src="img/ib.png" alt="img" style="zoom:60%;" />
+
+**前面说的CISC会有以下问题：**
+
+<img src="img/ciscpb.png" alt="img" style="zoom:60%;" />
+
+假设MOVE和6在一个Page，2在下一个Page。当发现2是Abscent，就会产生一个**Page Fault**，**返回地址是2的地址。**这样就会先把MOV 6存在CPU的某个位置，等2进来后再拼一起，放到Instruction流水线上执行
+
+**但是普通中断不这样**
+
+比如在TSL处产生了一个普通中断，要等TSL完成后，普通中断程序运行，**其返回值是TSL的下一条**，也就是说，**普通中断不管TSL成功与否**
+
+#### Paging With I/O
+
+* Locking Pages in Memory
+
+  如果一个Page中的程序在等I/O传来数据(比如buf[]在等数)，但Data还没来，程序被交换了，变成了别人的形状，这时候就要产生Page Fault把原来的程序写回来，很耗时。同时Data也肯恩被后来者覆盖，因此需要Lock一下Page，不让换出去
+
+  > *问题：Lock之后会有啥问题？*
+  >
+  > 恶意Lock，把所有的Virtual Page都锁上，即它映射的所有Page Frame都锁上了，别人的地方就小了
+
+* Backing Store
+
+  Page被换出去，存在磁盘的哪儿？ -> Disk中的swap area
+
+  <img src="img/bs.png" alt="img" style="zoom:60%;" />
+
+  > Windows: C:\pagefile.sys, swapfile.sys就是
+  >
+  > **Exercise：Linux生成交换文件**
+
+#### Separation of Policy and Mechanism
+
+<img src="img/sopam.png" alt="img" style="zoom:60%;" />
+
+#### Segmentation
+
+> *什么是段？*
+>
+> **一个区域，里面的地址是连续的**
+
+Why Segmentation?
+
+让程序和数据有分离独立的空间，利于共享和保护
+
+Segentation已弃用 -> 改用Page
+
+为什么CS，DS还在？向前兼容
+
+**那么，Segmentation，Page共存咋办？**
+
+MULTICS：多级翻译
+
+<img src="img/multics.png" alt="img" style="zoom: 67%;" />
+
+* 一个Virtual Address还是表示成：SG + offset
+
+* VA -> IA --Page Table--> PA
+
+* IA咋实现？
+
+  以前，CS，DS存的都是基地址，现在不存了，改存一个编号：Selector, Descriptor
+
+  还有一张Segment Table
+
+  <img src="img/st.png" alt="img" style="zoom:60%;" />
+
+  > 注意：得到的IA也是虚地址
+
+**RISC-V和ARM的区别**
+	ARM 架构和 RISC-V 架构都源自 1980 年代的精简指令计算机 RISC。两者最大的不同就在于其推崇的大道至简的技术风格和彻底开放的模式。
+	ARM 是一种封闭的指令集架构，众多只用 ARM 架构的厂商，只能根据自身需求，调整产品频率和功耗，不得改变原有设计，经过几十年的发展演变，CPU 架构变得极为复杂和冗繁，ARM 架构文档长达数千页，指令数目复杂，版本众多，彼此之间既不兼容，也不支持模块化，并且存在着高昂的专利和架构授权问题。
+	反观 RISC-V，在设计之初，就定位为是一种完全开源的架构，规避了计算机体系几十年发展的弯路，架构文档只有二百多页，基本指令数目仅 40 多条，同时一套指令集支持所有架构，模块化使得用户可根据需求自由定制，配置不同的指令子集。
+
+## File
+
+### File System
+
+File System = File + **File Management**
 
