@@ -1704,9 +1704,67 @@ MULTICS：多级翻译
 	ARM 是一种封闭的指令集架构，众多只用 ARM 架构的厂商，只能根据自身需求，调整产品频率和功耗，不得改变原有设计，经过几十年的发展演变，CPU 架构变得极为复杂和冗繁，ARM 架构文档长达数千页，指令数目复杂，版本众多，彼此之间既不兼容，也不支持模块化，并且存在着高昂的专利和架构授权问题。
 	反观 RISC-V，在设计之初，就定位为是一种完全开源的架构，规避了计算机体系几十年发展的弯路，架构文档只有二百多页，基本指令数目仅 40 多条，同时一套指令集支持所有架构，模块化使得用户可根据需求自由定制，配置不同的指令子集。
 
-## File
+## File System
 
-### File System
+### File System Overview
 
 File System = File + **File Management**
 
+Why File System?
+
+* How do you find information?
+
+* How do you keep one user from reading another user's data?(安全)
+
+* How do you know which blocks are free?
+
+* Others?
+
+  容灾性(xp非法关机)，文件缓存(提高文件命中率，访问速度)，实时性
+
+### Files
+
+#### File Naming
+
+Why file naming
+
+* Help you identify the information you need, i.e, help you speedup searching process
+
+<img src="img/fnex.png" alt="img" style="zoom:60%;" />
+
+Example: regedit on Windows
+
+> 注册表是windows操作系统中的一个核心数据库，其中存放着各种参数，直接控制着windows的启动、硬件驱动程序的装载以及一些windows应用程序的运行，从而在整个系统中起着核心作用。这些作用包括了软、硬件的相关配置和状态信息，比如注册表中保存有应用程序和资源管理器外壳的初始条件、首选项和卸载数据等，联网计算机的整个系统的设置和各种许可，**文件扩展名与应用程序的关联**，硬件部件的描述、状态和属性，性能记录和其他底层的系统状态信息，以及其他数据等。
+>
+> 具体来说，在启动Windows时，Registry会对照已有硬件配置数据，检测新的硬件信息；系统内核从Registry中选取信息，包括要装入什么设备驱动程序，以及依什么次序装入，内核传送回它自身的信息，例如版权号等；同时设备驱动程序也向Registry传送数据，并从Registry接收装入和配置参数，一个好的设备驱动程序会告诉Registry它在使用什么系统资源，例如硬件中断或DMA通道等，另外，设备驱动程序还要报告所发现的配置数据；为应用程序或硬件的运行提供增加新的配置数据的服务。配合ini文件兼容16位Windows应用程序，当安装—个基于Windows 3.x的应用程序时，应用程序的安装程序Setup像在windows中—样创建它自己的INI文件或在win.ini和system.ini文件中创建入口；同时windows还提供了大量其他接口，允许用户修改系统配置数据，例如控制面板、设置程序等。
+>
+> 如果注册表受到了破坏，轻则使windows的启动过程出现异常，重则可能会导致整个windows系统的完全瘫痪。因此正确地认识、使用，特别是及时备份以及有问题恢复注册表对windows用户来说就显得非常重要。
+
+#### File Types
+
+* Regular file
+* Device file
+  * block device file
+  * character device file
+* Directory file
+* Linux Examples
+
+Most important: exe and archive
+
+<img src="img/exeac.png" alt="img" style="zoom:60%;" />
+
+> **Magic number: 标识符，表示程序是可执行的**
+>
+> archive: 库，档案
+>
+> *问题：为什么有的程序就几行，却把整个库都链上了？*
+
+File Access
+
+* Sequential access -> 只能顺序访问
+
+  管道文件，设备文件
+
+* Random access -> 能顺序，也能随机
+
+  很常见，比如用c随便开一个文件，可以用fseek调转，随便跳
