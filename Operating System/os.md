@@ -1759,7 +1759,34 @@ Most important: exe and archive
 >
 > *问题：为什么有的程序就几行，却把整个库都链上了？*
 
-File Access
+展示：普通文件和目录文件
+
+在linux下执行`ll`命令
+
+<img src="img/ll.png" alt="img" style="zoom:67%;" />
+
+> 第一列
+>
+> * 'd' 代表目录文件
+> * '-' 代表普通文件
+
+Device file下的block device file和character device file
+
+进入`/dev`目录，使用`ll`命令
+
+<img src="img/devll.png" alt="img" style="zoom:67%;" />
+
+> 第一列中c代表character device file
+>
+> 那么block呢？
+
+使用`ll loop1`命令：
+
+<img src="img/loop1.png" alt="img" style="zoom:67%;" />
+
+> 这个b就是block device file
+
+#### File Access
 
 * Sequential access -> 只能顺序访问
 
@@ -1768,3 +1795,71 @@ File Access
 * Random access -> 能顺序，也能随机
 
   很常见，比如用c随便开一个文件，可以用fseek调转，随便跳
+
+#### File Attributes
+
+文件的属性和文件本身不会存在一起，分开存
+
+想要修改文件的属性，只能通过操作系统提供的接口
+
+<img src="img/fa.png" alt="img" style="zoom:67%;" />
+
+#### File Operations
+
+Manipulate(操作) files in program: Using system call
+
+```c
+/*File copy program. Error checking and reporting is minimal.*/
+
+#include <sys/types.h> 						/*include necessary header files*/
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int main(int argc, char*argv[]); 			 /*ANSI prototype*/
+#define BUF SIZE 4096 						/*use a buffer size of 4096 bytes*/
+#define OUTPUT MODE 0700 					/*protection bits for output file*/
+
+
+int main(int argc, char*argv[])
+{
+    int in_fd, out_fd, rd_count, wt_count;
+    char buffer[BUF SIZE];
+    /**
+    * argc包括：文件名，要copy的文件，copy的目标文件，一共3个
+    * 所以要看看argc到底是不是3
+    */
+    if (argc != 3) exit(1); /*syntax error if argc is not 3*/
+    
+    /*Open the input file and create the output file*/
+    in_fd = open(argv[1], O_RDONLY);						 /*open the source file*/
+    if (in_fd < 0) exit(2); 								/*if it cannot be opened, exit*/
+    
+    out_fd = creat(argv[2], OUTPUT_MODE); 					 /*create the destination file*/
+    if (out_fd < 0) exit(3); 								/*if it cannot be created, exit*/
+    /*Copy loop*/
+    
+    while (TRUE) {
+        /* 使用read和write系统调用来读写文件实现copy */
+        rd_count = read(in_fd, buffer, BUF_SIZE); 			/*read a block of data*/
+        /**
+        * 如果read到文件末尾继续read，rd_count为0
+        * 如果read过程中出错，read_count < 0
+        */
+        if (rd_count <= 0) break; 					   	/*if end of file or error, exit loop*/
+        wt_count = write(out_fd, buffer, rd_count); 	    /*wr ite data*/
+        if (wt_count <= 0) exit(4);						 /*wt count <= 0 is an error*/
+    }
+    
+    /*Close the files*/
+    close(in_fd);
+    close(out_fd);
+    if (rd_count == 0)										 /*no error on last read*/
+    exit(0);
+    else
+    exit(5); 												/*error on last read*/
+}
+```
+
+> **Exercise: 把这个代码在自己的机子上转一下**
+
