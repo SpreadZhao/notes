@@ -1155,7 +1155,7 @@ Use Swap
 
 <img src="img/swap.png" alt="img" style="zoom:67%;" />
 
-Swap Problem
+Swap Problem<a name = "downward" ></a>
 
 产生空洞(hole, Fragment, 即上图中的阴影)，消掉要把所有Process向下移动(downward)，称为Memory Compaction(内存紧缩)，但是这样做会**浪费CPU时间**
 
@@ -1863,3 +1863,277 @@ int main(int argc, char*argv[])
 
 > **Exercise: 把这个代码在自己的机子上转一下**
 
+#### File Structure
+
+Three kinds of file's logical structure(**这是每一个文件内部的结构，不是文件和文件之间的关系结构!**)
+
+<a name = "byteseq"></a>
+
+* byte sequence
+
+  > 顺序的字节集合
+  >
+  > *怎么观测到文件是一个顺序结构，有什么例子？*
+  >
+  > * Mapped File，指针映射的一个文件是连续的
+  > * c语言，每调用一次fread都会把指针往后移一下，或者fseek可以跳转便宜量，肯定是顺序的字节结构才能这样偏转
+
+* record sequence
+
+  > 早期的一些文件系统，拆成一块一块，每一块都是等长的
+
+* Tree(withh key field: First letter)
+
+  > *有什么例子？*
+  >
+  > * 在程序里写一个树的数据结构
+  > * html文件就是一个树形结构的文件
+
+* **后两种都是在第一种的基础上搭建的！**
+
+<img src="img/tkfs.png" alt="img" style="zoom:50%;" />
+
+> **这三种是逻辑结构，不是在磁盘上存的物理结构**
+
+### Directory
+
+上面看到了那么多文件，文件属性，那么怎么组织他们？
+
+* Ostrich Policy: Let it be chaos, I don't care!
+
+  > 鸵鸟方式：乱着来
+  >
+  > 在某些系统就几个文件，弄那么复杂的目录没有必要，所以鸵鸟在这时候还挺有用
+
+* Classify
+
+#### Single-Level Directory
+
+<img src="img/sld.png" alt="img" style="zoom:50%;" />
+
+* Contains 4 files
+* Owned by 4 different people: A, B, C and D
+
+<img src="img/sld2.png" alt="img" style="zoom:50%;" />
+
+* Conatins 4 files
+* Owned by 3 different people: A, B, and C
+
+Problems of Single-Level Directory
+
+* **都放一个目录里，不同的用户可能会起一样的名字**
+
+#### Double-Level Directory
+
+<img src="img/dld.png" alt="img" style="zoom:50%;" />
+
+* 每个用户一个文件夹
+
+#### Hierarchical Directory
+
+<img src="img/hd.png" alt="img" style="zoom:50%;" />
+
+> *Is it perfect?*
+>
+> * Search Speed: 需要一层一层进，慢
+>
+> * 目录代表分类，那分完之后，这个东西就定了，后面如果要采用不同的分类，或者两种分类共存 ，不好办
+>
+>   > 比如文件按C, Java, Python分，之后又想按数据库，面向对象，操作系统分
+>
+> * MVC: Model, View, Control
+
+#### Path Names
+
+* Absolute path name: start from '/'
+* Relative path name: start from '.' or '..'
+
+> *思考：在某一目录下，执行程序的前面必须要加上一个`./`*，这是为什么？
+>
+> 提示：环境变量$PATH
+>
+> `echo $PATH`
+
+Path Name Work
+
+<img src="img/dtree.png" alt="img" style="zoom:50%;" />
+
+> 如果要想快点查找：使用索引
+>
+> `locate <filename>`
+>
+> 如果没建索引，那只能慢慢找
+>
+> `find <filename>`
+
+Directory operating interface
+
+| Create   | Readdir |
+| -------- | ------- |
+| Delete   | Rename  |
+| Opendir  | Link    |
+| Closedir | Unlink  |
+
+Question
+
+* 为啥读一个文件还要open一下，直接read不行吗？
+
+* 为啥要有一个Rename，对文件进行修改本身就是要进行写操作，那用Write不就行了吗？
+
+  > 目录文件在操作系统存储的时候是有特定结构的，不能随便改的，这个改的规则不能暴露给用户，因此才封装在Rename中，不能像Write一样随便把指针随便跳
+  >
+  > **Exercise: 用Opendir和Readdir把目录项列出来然后打印出来**
+
+* 内核函数和系统调用的区别
+
+  > * 系统调用是由内核函数实现的，进入kernel后，不同的系统调用会找到各自对应的内核函数，这些内核函数被叫做系统调用的"服务例程"
+  >
+  > * 库函数也就是我们通常所说的应用编程接口API，它其实就是一个函数定义，比如常见read()、write()等函数说明了如何获得一个给定的服务，但是系统调用是通过软中断向内核发出一个明确的请求，再者**系统调用是在内核完成的，而用户态的函数是在函数库完成的**。
+  > * 系统调用发生在内核空间，因此如果在用户空间的一般应用程序中使用系统调用来进行文件操作，会有用户空间到内核空间切换的开销。事实上，即使在用户空间使用库函数来对文件进行操作，因为文件总是存在于存储介质上，因此不管是读写操作，都是对硬件（存储器）的操作，都必然会引起系统调用。也就是说，库函数对文件的操作实际上是通过系统调用来实现的。例如C库函数fwrite()就是通过write()系统调用来实现的。
+  > * 这样的话，使用库函数也有系统调用的开销，为什么不直接使用系统调用呢？这是因为，**读写文件通常是大量的数据（这种大量是相对于底层驱动的系统调用所实现的数据操作单位而言），这时，使用库函数就可以大大减少系统调用的次数。这一结果又缘于缓冲区技术。在用户空间和内核空间，对文件操作都使用了缓冲区，例如用fwrite写文件，都是先将内容写到用户空间缓冲区，当用户空间缓冲区满或者写操作结束时，才将用户缓冲区的内容写到内核缓冲区，同样的道理，当内核缓冲区满或写结束时才将内核缓冲区内容写到文件对应的硬件媒介**。
+  >   系统调用与系统命令：系统命令相对API更高一层，每个系统命令都是一个可执行程序，比如常用的系统命令ls、hostname等，比如strace ls就会发现他们调用了诸如open(),brk(),fstat(),ioctl()等系统调用。
+
+**An Link Example**
+
+<a name = "linkex"></a>
+
+现在有一个s.c文件，给它建一个link，使用如下代码
+
+> `ln -s s.c sln.c`
+
+这样就建好了一个类似快捷方式的东西，sln.c就是s.c的快捷方式
+
+输入`ll s.c sln.c`可以看到他们的关系
+
+<img src="img/sln.png" alt="img" style="zoom:80%;" />
+
+### Files Implementation
+
+How do we implement file?
+
+* 在存储文件的时候
+  * 磁盘空间怎么分配？ - Physical Block Allocation
+  * 把文件存在磁盘上的时候，通常是分散在各个角落，那么这一个文件的顺序应该怎么存？哪一个是开头？- Block Tracking
+
+**Physical Block**
+
+> 地址是连续的，存在一块的一个区域叫做一个<u>Physical Block</u>
+>
+> *对文件进行访问的时候，都是按照Block为单位进行的，并不是按照字节来的，为什么？*
+>
+> * ~~可能是上面提到的系统调用，按照块来可以少进行用户态和内核态的切换？~~
+
+#### Physical Block Allocation
+
+* Raw version: Continuous Allocation
+
+  <img src="img/ca.png" alt="img" style="zoom:50%;" />
+
+  > * 在特定情况下(类似机械硬盘)，读写效率比较高，机械臂来回动的时候，由于是连续的，移动少，**不用来回寻道**
+  > * 不停生成删除文件，会形成大大小小的空洞，要消除空洞，就要把文件往前移一移(参考<a href = "#downward">downward</a>操作)
+
+#### Block Tracking
+
+按照上面那种方式存完了，只是表面上感觉着是顺序存的，**实际上还是分散在磁盘中，只不过是用了某种方式让用户从表面上看起来是顺序存的**。用什么方式呢？Maybe Link list
+
+<img src="img/llcun.png" alt="img" style="zoom:50%;" />
+
+> * 这么存，随机访问很慢，每次都要从表头一个一个搜索，改进 -> FAT
+
+#### FAT(File Allocation Table)
+
+<img src="img/fat.png" alt="img" style="zoom:50%;" />
+
+> * 要访问的时候，**整张表全部加载到内存里**，这样访问某一个Block，查表(看下面英文)就行了
+> * 当磁盘超大的时候，FAT表太大了，太占空间，FAT表里存的是**所有文件**的Block占用情况
+> * (考点)**FAT除了Tracking，还有别的功能：那些空的位置，代表没人用的Block，所以也记录了当前磁盘上的空闲块**
+> * Using the table of Fig. 4-12, we can **start with block 4 and follow the chain all the way to the end**. The same can be done starting with block 6. Both chains are terminated with a special marker (e.g.,−1) that is not a valid block number. 
+
+#### Inode
+
+* **一个文件对应一个Inode**，对比前面的FAT，要访问那个文件，加载哪个文件的Inode即可，不向上面那样导入整张表
+* 一个文件坏了，不会影响到其他文件，可靠性提高
+
+<img src="img/inode.png" alt="img" style="zoom:50%;" />
+
+* 前半部分存File Attributes
+* 逻辑块0对应的物理块
+* 逻辑块1对应的物理块
+* ...
+* Inode大小是固定的，万一槽位用完了咋办？-> 最后一个是个间接块，存可能溢出的文件的逻辑块，同理，还有间接间接块...
+
+> * *Inode也是在磁盘上存的，那Inode的空间是谁给分配的？*
+
+### Directory Implementation
+
+* **目录文件，不是文件夹！**
+
+  文件控制块的有序集合构成文件目录，每个目录项即是一个文件控制块。
+
+  为了实现文件目录的管理，通常将文件目录以文件的形式保存在外存空间，这个文件就被称为目录文件。目录文件是长度固定的记录式文件。
+
+  系统为用户提供一个目前正在使用的工作目录，称为当前目录。
+
+  从操作系统的观点，**文件夹也是一种文件，只不过是可以包含其他文件的文件**。<u>你可以把文件目录当成一张表，每个表项就是FCB（文件控制块），每个表项标识着某个文件的存在信息。</u>
+  <u>但是这个表也得以文件的形式存储在磁盘上，我们称这个文件为目录文件，用来跟普通文件区别</u>。
+
+在已有的<a href = "#byteseq">顺序集合</a>的基础上，怎么实现目录文件？
+
+#### Fixed size
+
+<img src="img/fxsize.png" alt="img" style="zoom:50%;" />
+
+> * 一个Directory Entry(目录项)的大小是固定的
+> * 比如前面一半存名字，后面一半可能存属性
+> * 文件名对应的文件在磁盘上存的位置，如果是用Inode存的，就存Inode的地址；如果是连续存的，就存那一块的首地址
+> * attributes的位置不一定，Inode中不是也有文件属性吗，所以不一定存在哪儿，可能在目录项，也可能在Inode
+> * 问题：文件名很长咋办？比如电脑上会有这种`~.`开头的文件，那个就有可能是名字太长了，按照一种规则给截短了
+
+#### Improved
+
+<img src="img/ipr.png" alt="img" style="zoom:67%;" />
+
+> * 以一个叉号表示文件名的结束
+> * 阴影表示**字节对齐**
+> * a有个问题，删掉一个目录项会有空洞，采用b，**把固定长度的东西放在前面**，移动的空间会少一些，不用移attributes之类的
+
+### Linked File Implementation
+
+在上面的<a href = "#linkex">An Link Example</a>中，s.c和sln.c是一个文件吗？
+
+> **是两个文件！**怎么证明？
+>
+> 一个文件对应一个Inode，每一个Inode在系统中有唯一编号
+>
+> 使用`ls -i sln.c`看到sln.c对应Inode的编号
+>
+> ![img](img/lsisln.png)
+>
+> 再看一下s.c的编号
+>
+> ![img](img/lsis.png)
+>
+> * **这个就是软连接-soft**
+
+**创建硬链接**
+
+对s.c创建硬链接，使用`ln s.c hln.c`，再看一下他的信息和Inode编号
+
+<img src="img/hl.png" alt="img" style="zoom:100%;" />
+
+和s.c一样，所以硬链接创建的是同一个文件
+
+<img src="img/hli.png" alt="img" style="zoom:67%;" />
+
+*一个实验：如果把s.c删掉，sln.c会进入悬空状态；如果把s.c删掉，hln.c的文件内容还在，这是为什么？*
+
+> * 硬链接是通过目录指向同一个Inode实现的，把一个目录删掉，另一个还在。那什么时候Inode被释放呢？那个Count看见了吗，当Count变成0的时候就释放了
+> * Count在哪儿看？输入`ll hln.c`的时候，那一排rwx之后有个2，那个就是Count
+
+*为啥要用软连接？*
+
+比如链接一个库会用`-lpthread`，`-lstdc`之类的，那么这些库由于标准的改变，修改bug，要扩充，加载一个超集等等原因，会有更新，而在执行的时候，会有makefile来处理依赖关系，那比如我`-lpthread_v1`，之后更新了，又变成`-lpthread_v2`很麻烦，所以直接去掉版本号，**然后这个`-lpthread`是链了一个软连接，让它指向真正的库文件**
+
+*既然软连接这么好使，还要硬链接干嘛？*
+
+上面都说了，软连接是俩不同的文件，**创建软连接是要消耗Inode的！**Inode的个数在一些系统上是有限的，所以软连接过多，有时候磁盘空间够，但是文件创建不出来了
