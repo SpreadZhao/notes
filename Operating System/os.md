@@ -2007,7 +2007,9 @@ Question
 
 <img src="img/sln.png" alt="img" style="zoom:80%;" />
 
-### Files Implementation
+### File System Implementation
+
+#### Files Implementation
 
 How do we implement file?
 
@@ -2023,7 +2025,7 @@ How do we implement file?
 >
 > * ~~可能是上面提到的系统调用，按照块来可以少进行用户态和内核态的切换？~~
 
-#### Physical Block Allocation
+##### Physical Block Allocation
 
 * Raw version: Continuous Allocation
 
@@ -2032,7 +2034,7 @@ How do we implement file?
   > * 在特定情况下(类似机械硬盘)，读写效率比较高，机械臂来回动的时候，由于是连续的，移动少，**不用来回寻道**
   > * 不停生成删除文件，会形成大大小小的空洞，要消除空洞，就要把文件往前移一移(参考<a href = "#downward">downward</a>操作)
 
-#### Block Tracking
+##### Block Tracking
 
 按照上面那种方式存完了，只是表面上感觉着是顺序存的，**实际上还是分散在磁盘中，只不过是用了某种方式让用户从表面上看起来是顺序存的**。用什么方式呢？Maybe Link list
 
@@ -2040,7 +2042,7 @@ How do we implement file?
 
 > * 这么存，随机访问很慢，每次都要从表头一个一个搜索，改进 -> FAT
 
-#### FAT(File Allocation Table)
+##### FAT(File Allocation Table)
 
 <img src="img/fat.png" alt="img" style="zoom:50%;" />
 
@@ -2049,7 +2051,7 @@ How do we implement file?
 > * (考点)**FAT除了Tracking，还有别的功能：那些空的位置，代表没人用的Block，所以也记录了当前磁盘上的空闲块**
 > * Using the table of Fig. 4-12, we can **start with block 4 and follow the chain all the way to the end**. The same can be done starting with block 6. Both chains are terminated with a special marker (e.g.,−1) that is not a valid block number. 
 
-#### Inode
+##### Inode
 
 * **一个文件对应一个Inode**，对比前面的FAT，要访问那个文件，加载哪个文件的Inode即可，不向上面那样导入整张表
 * 一个文件坏了，不会影响到其他文件，可靠性提高
@@ -2064,7 +2066,7 @@ How do we implement file?
 
 > * *Inode也是在磁盘上存的，那Inode的空间是谁给分配的？*
 
-### Directory Implementation
+#### Directory Implementation
 
 * **目录文件，不是文件夹！**
 
@@ -2079,7 +2081,7 @@ How do we implement file?
 
 在已有的<a href = "#byteseq">顺序集合</a>的基础上，怎么实现目录文件？
 
-#### Fixed size
+##### Fixed size
 
 <img src="img/fxsize.png" alt="img" style="zoom:50%;" />
 
@@ -2089,7 +2091,7 @@ How do we implement file?
 > * attributes的位置不一定，Inode中不是也有文件属性吗，所以不一定存在哪儿，可能在目录项，也可能在Inode
 > * 问题：文件名很长咋办？比如电脑上会有这种`~.`开头的文件，那个就有可能是名字太长了，按照一种规则给截短了
 
-#### Improved
+##### Improved
 
 <img src="img/ipr.png" alt="img" style="zoom:67%;" />
 
@@ -2097,7 +2099,7 @@ How do we implement file?
 > * 阴影表示**字节对齐**
 > * a有个问题，删掉一个目录项会有空洞，采用b，**把固定长度的东西放在前面**，移动的空间会少一些，不用移attributes之类的
 
-### Linked File Implementation
+#### Linked File Implementation
 
 在上面的<a href = "#linkex">An Link Example</a>中，s.c和sln.c是一个文件吗？
 
@@ -2132,8 +2134,151 @@ How do we implement file?
 
 *为啥要用软连接？*
 
-比如链接一个库会用`-lpthread`，`-lstdc`之类的，那么这些库由于标准的改变，修改bug，要扩充，加载一个超集等等原因，会有更新，而在执行的时候，会有makefile来处理依赖关系，那比如我`-lpthread_v1`，之后更新了，又变成`-lpthread_v2`很麻烦，所以直接去掉版本号，**然后这个`-lpthread`是链了一个软连接，让它指向真正的库文件**
+> 比如链接一个库会用`-lpthread`，`-lstdc`之类的，那么这些库由于标准的改变，修改bug，要扩充，加载一个超集等等原因，会有更新，而在执行的时候，会有makefile来处理依赖关系，那比如我`-lpthread_v1`，之后更新了，又变成`-lpthread_v2`很麻烦，所以直接去掉版本号，**然后这个`-lpthread`是链了一个软连接，让它指向真正的库文件**
 
 *既然软连接这么好使，还要硬链接干嘛？*
 
-上面都说了，软连接是俩不同的文件，**创建软连接是要消耗Inode的！**Inode的个数在一些系统上是有限的，所以软连接过多，有时候磁盘空间够，但是文件创建不出来了
+> 上面都说了，软连接是俩不同的文件，**创建软连接是要消耗Inode的！**Inode的个数在一些系统上是有限的，所以软连接过多，有时候磁盘空间够，但是文件创建不出来了
+
+#### File System Layout
+
+<img src="img/fsl.png" alt="img" style="zoom:60%;" />
+
+把整个磁盘看成一个大文件，一个顺序字节集合，磁盘可以被分成很多个区(Disk Partion)，每一个分区中又有Boot block, Super block, Free space mgmt ... 通常一个分区认为可以装一个操作系统
+
+* MBR(Master Boot Record)用于启动电脑，MBR的末尾包括了Partion table，标记了每个分区的启示和末尾的地址，只有一个，对于多个操作系统，MBR可以指出要启动的是哪一个系统
+* Boot Block里边放一些能把操作系统加载到内存里的东西
+* Super Block里放一些文件系统的关键参数，比如前面说的Physical Block，那一个块有多大呢？Inode的区域(就是后面那块)的起始地址在哪？或者这是啥文件系统呢？是ext3，ext4，还是ntfs之类的？
+* Free space management，MM里讲过 ，是bitmap或者是link list
+
+#### Log-Structed File System
+
+把文件系统当做一个日志文件，只往里追加着写
+
+*为啥会有这个思想？*
+
+> 内存，CPU都越来越快，越来越便宜，因此后序的趋势一定是I/O决定了性能，而主要取决于写操作的速度，**因为内存大了，CPU的cache也大了，读的话很大概率都是从缓冲区和内存里读，很少概率会从磁盘读，但是写操作一定会往磁盘上写**。而写的时间主要取决于机械臂的移动。那追加着写，就能减少机械臂的移动！
+
+*但是一直这样的话，如果写到磁盘的末尾，会发生肾么？*
+
+* If there’s no free disk space, an error will be occurred.
+* A cleaner Process, continuously scans from the start of log. If segment contains no data，then marks segment free for next log write，If contains inode and data block still inuse，Then these inode and data block will be read out. Then mark this segment free. The new data read out will be use as a new logsegment appended to the end。
+
+*Log和非Log在出错之后，恢复有什么差别？*
+
+> **日志出错后，定位速度快，因为当前位置就是出错位置！**
+
+虽然现在文件系统不用Log了，但是这个思想还在用
+
+> SSD的NAND芯片，在写入时一定要先擦除操作，而且对于同一个单元，频繁擦除，寿命不长，所以采用Log方式追加着写，**能做到写均衡**
+
+#### Journaling File System
+
+* Log啥都记日志，Journaling仅记录**关键数据更改的日志**，比如Inode
+
+#### Virtual File System
+
+<img src="img/pavs.png" alt="img" style="zoom:60%;" />
+
+<img src="img/vfa.png" alt="img" style="zoom:60%;" />
+
+比如你电脑是NTFS的，为啥还能识别FAT32硬盘呢？就是因为虚拟文件系统，将各个不同的文件系统统一抽象成一个接口，变成类似c++的虚函数，java的抽象类中不加final的函数，这样不管啥系统，都调用这个父类的函数，就直接向下转型为自己的函数执行了，也就是多态，实现了多种文件系统的共存，移植方便
+
+### File System Management & Optimization
+
+#### Disk Space Management
+
+一个磁盘块(disk block)多大合适？
+
+* Too big: waste disk space
+* Too small: multiple seeks and rotational delays
+
+**Keeping Track of Free Blocks**
+
+<img src="img/ktfb.png" alt="img" style="zoom:60%;" />
+
+<img src="img/kt2.png" alt="img" style="zoom:60%;" />
+
+有些用户会恶意写垃圾数据，因此需要做一些限制：Quota table(配额表)
+
+<img src="img/qtt.png" alt="img" style="zoom:60%;" />
+
+* Soft: 过了会警告
+
+* Hard: 直接不让在创了
+
+* Block limit: 一个文件占用的块数的限制
+
+* File limit
+
+  > Block limit不是一个块大小的限制！之前Super block那里，就已经把块的大小存在里面了，改不了的！
+  >
+  > > 打开文件的个数有限制吗(当时上课的时候说的)？
+  > >
+  > > * 打开文件进行的操作：加载Inode，记录文件的状态(初始地址等)，这些是占内存的，所以打开文件是有上限的
+  >
+  > File limit是拥有的文件的上限：Inode是有上限的，如果一个用户不断创建小文件，拥有超级多，那就把Inode消耗光了
+  >
+  > *问题：那个表里是Open file table里的QuotaPointer，那么是每一个用户对应一张Quota table，还是每一个文件都有一张Quota table呢？我感觉是每个用户一张，然后不同的Open file table中正在打开的文件，每个里面的Quota pointer，只要User是那个User，那pointer指向的就是同一张Quota table*
+
+#### File System Reliability
+
+增量式备份(incremental dump)：当修改文件时，不拷贝整个文件系统，只拷贝修改过的文件
+
+<img src="img/dump.png" alt="img" style="zoom:67%;" />
+
+* 应用：虚拟机镜像，拍照做，快速拍只拍改变的部分
+
+* 问题：
+
+  * Compress or not?
+
+  * How to perform a backup on an active file system?
+
+    > 比如电信局要备份通话记录，那有人正在打电话的时候咋备份？正在修改文件系统，那怎么备份？
+
+  * Nontecnical: like security?
+
+**Logical dump or Physical Dump?**
+
+* Physical dump: 从0开始，全部按顺序输出到磁带上
+
+* Logical dump: 从特定的目录(1 or more)开始，递归备份修改的文件(如果第一次备份，那就全拷)
+
+  > 整盘备份，并且是第一次，Logical比Physical要慢，因为Logical基于API，需要打开文件，对每个文件要建立Inode，更耗时，Physical最多给硬盘整个建立一个Inode，也不用遍历树型目录
+
+#### File System Consistency
+
+要写一个文件，建立Inode，但数据还没写，断电了；或者分配block的时候，正要改链表，断电了，咋办？
+
+* UNIX: fsck
+* Windows scandisk(非法关机)
+
+<img src="img/sd.png" alt="img" style="zoom:60%;" />
+
+两张表，一张记当前block在bitmap/list中使用的出现次数；一张记空闲次数。那么只能是0 1或者1 0，其他情况都是有问题
+
+快速扫描(上面是全盘扫描)
+
+> * Checker通过扫描目录文件中目录项指向
+>   文件的指针，建立一张表，该表的每一项
+>   表示每个文件的引用数
+> * Inode节点本身也含有本文件的引用数，
+>   据此也可以建立一张表
+> * 上述两张表进行比对
+
+#### File System Performance
+
+**Cache**
+
+<img src="img/cache.png" alt="img" style="zoom:60%;" />
+
+> 使用**LRU**，Hash算法
+>
+> * 检査全部的读请求,査看在高速缓存中是否有所需要的块。如果存在,可执行读操作而无须访问磁盘。如果该块不在高速缓存中,首先要把它读到高速缓存,再复制到所需地方。之后,对同一个块的请求都通过高速缓存完成
+> * 当要读一个新块时，替换现有的cache，那根据LRU，替换栈底的
+
+*如果要写，写到Cache上，还没从Cache往磁盘上传的时候，断电了，咋整？*
+
+* Write-through Cache: 要做就做完，就算之差一点，也算没做
+
