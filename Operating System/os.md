@@ -2260,11 +2260,8 @@ How do we implement file?
 
 快速扫描(上面是全盘扫描)
 
-> * Checker通过扫描目录文件中目录项指向
->   文件的指针，建立一张表，该表的每一项
->   表示每个文件的引用数
-> * Inode节点本身也含有本文件的引用数，
->   据此也可以建立一张表
+> * Checker通过扫描目录文件中目录项指向文件的指针，建立一张表，该表的每一项表示每个文件的引用数
+> * Inode节点本身也含有本文件的引用数，据此也可以建立一张表
 > * 上述两张表进行比对
 
 #### File System Performance
@@ -2280,5 +2277,77 @@ How do we implement file?
 
 *如果要写，写到Cache上，还没从Cache往磁盘上传的时候，断电了，咋整？*
 
-* Write-through Cache: 要做就做完，就算之差一点，也算没做
+* Write-through Cache: 要做就做完，就算只差一点，也算没做
+
+**Block Read Ahead**
+
+> When the file system is asked to produce block k in a file, it does that, but when it is finished, it makes a sneaky check in the cache to see if block k + 1 is already there. If it is not, it schedules a read for block k + 1 in the hope that when it is needed, it will have already arrived in the cache.At the very least, it will be on the way
+
+**Reducing Disk-Arm Motion**
+
+> * Log File Structure
+>
+> * 每次分配新块，分到上一个块的旁边
+>
+> * <img src="img/cid.png" alt="img" style="zoom:60%;" />
+>
+>   把Inode分散，这样加载Inode的时候，不用移到外围，再移回来
+>
+> * 把启动文件放在SSD上，把文件放在机械盘上
+
+
+
+#### Defragmenting
+
+> * 在初始安装操作系统后,从磁盘的开始位置,ー个接ー个地连续安装了程序与文件。所有的空闲磁盘空间放在ー个单独的、与被安装的文件邻近的单元里。但随着时间的流逝,文件被不断地创建与删除,于是磁盘会产生很多碎片,文件与空穴到处都是。结果是,当创建一个新文件时,它使用的块会散布在
+>   整个磁盘上,造成性能的降低。
+> * 磁盘性能可以通过如下方式恢复:移动文件使它们相邻,并把所有的（至少是大部分的）空闲空间放在一个或多个大的连续的区域内。Windows有一个程序defrag就是从事这个工作的。Windows的用户应该定期使用它,当然,SSD盘除外。
+> * 磁盘碎片整理程序会在ー个在分区末端的连续区域内有大量空闲空间的文件系统上很好地运行。这段空间会允许磁盘碎片整理程序选择在分区开始端的碎片文件,并复制它们所有的块放到空闲空间内。这个动作在磁盘开始处释放出ー个连续的块空间,这样原始或其他的文件可以在其中相邻地存放。这个过程可以在下一大块的磁盘空间上重复,并继续下去。
+> * 有些文件不能被移动,包括页文件、休眠文件以及日志,因为移动这些文件所需的管理成本要大于移动它们所获得的收益。在ー些系统中,这些文件是固定大小的连续的区域,因此它们不需要进行碎片整理。这类文件缺乏灵活性会造成一些问题,ー种情况是,它们恰好在分区的末端附近并且用户想减小分区的大小。解决这种问题的唯一的方法是把它们ー起删除,改变分区的大小,然后再重新建立它们。
+> * Linux文件系统（特别是ext2和6xt3） 由于其选择磁盘块的方式,在磁盘碎片整理上一般不会遭受像Windows那样的困难,因此很少需要手动的磁盘碎片整理。而且,固态硬盘并不受磁盘碎片的影响。事实上,在固态硬盘上做磁盘碎片整理反倒是多此ー举,不仅没有提髙性能,反而磨损了固态硬盘。所以碎片整理只会缩短固态硬盘的寿命。
+
+### Example File Systems
+
+#### ISO 9660
+
+<img src="img/iso.png" alt="img" style="zoom:60%;" />
+
+> * the first field is a byte telling how long the entry is directory entries have variable lengths
+> * second byte tells how long the extended attributes are Directory entries may optionally have an extended attributes
+> * Flags field contains a few miscellaneous bits, including one to hide the entryin listings (a feature copied from MS-DOS), one to distinguish an entry that is afile from an entry that is a directory, one to enable the use of the extended attributes, and one to mark the last entry in a directory.
+> * L: gives the size of the file name in bytes
+> * After entry, it comes the starting block of the file itself. Files are stored as contiguous runs of blocks, so a file’s location is completely specified by the starting block and the size, which is contained in the next field.
+> * 问题：文件名15个byte，太长了要用别的格式
+
+#### MS-DOS
+
+<img src="img/msdos.png" alt="img" style="zoom:67%;" />
+
+> * 文件名11个byte，左对齐，右补空格
+> * **Attributes描述一个文件是否是Read-Only, Archived, Hidden, System file**，不能写只读文件,这样避免了文件意外受损。存档位没有对应的操作系统的功能（即MS-DOS不检査和设置它）。存档位主要的用途是使用户级别的存档程序在存档ー个文件后清理这一位,其他程序在修改了这个文件之后设置这一位。以这种方式,ー个备份程序可以检査毎个文件的这一位来确定是否需要备份该文件。设置隐藏位能够使一个文件在目录列表中不出现,其作用是避免初级用户被ー些不熟悉的文件搞糊涂了。最后,系统位也隐藏文件。另外,系统文件不可以用del命令刪除,在MS-DOS的主要组成部分中，系统位都被设置
+> * Time2个字节16bit，一共2^16 = 65536个状态，但一天是86400秒，因此可能会有2s左右误差
+> * First block number: 和FAT搭配，从第一块开始遍历FAT
+
+#### UNIX V7
+
+<img src="img/unixv7.png" alt="img" style="zoom:67%;" />
+
+> *给了这个目录项，问你：UNIX V7能容纳的文件个数是多少？*
+>
+> * Inode number是2个byte，16个bit，所以有2^16种状态，即这2byte最多表示这么多个不同的Inode，而且一个Inode对应一个文件，所以文件的个数就是2^16
+>
+> *还是这个，问你：UNIX V7能容纳的文件名的个数是多少？*
+>
+> * 不是2^(14*8) = 2^112，因为这是：如果这些目录项都存在在同一个文件夹(一个表示为文件夹的目录项)下的时候，这些目录项(并不是所有目录项)的文件名肯定不同，这个数表示的是这个文件夹下的文件最多能有多少个不同的名字。
+> * 实际有多少，大于2^16就行了，因为软连接对应Inode，硬链接不对应Inode，所以(文件+软+硬)一定是大于(文件+软)=2^16
+
+<img src="img/uxi.png" alt="img" style="zoom:67%;" />
+
+> 最后三个槽位都是扩展槽位
+
+<img src="img/usc.png" alt="img" style="zoom:67%;" />
+
+## I/O
+
+### Principles of I/O Hardware
 
