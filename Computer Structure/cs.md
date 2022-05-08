@@ -709,3 +709,171 @@ ddr2, ddr3……频率提高，充电时间降低
      >
      >   去表格里地址前3位是001的查，发现没有3FB7，不命中
 
+#### 替换策略
+
+* RAND - 随机
+* FIFO
+* NFU
+* LRU
+* OPT
+
+**FIFO**
+
+<img src="img/fifo.png" alt="img" style="zoom:60%;" />
+
+* 替换栈底元素
+
+**FIFO的颠簸**
+
+<img src="img/fifodb.png" alt="img" style="zoom:60%;" />
+
+**LRU和FIFO的区别：FIFO命中后不会把栈底元素移到栈顶，LRU会**
+
+<img src="img/lru.png" alt="img" style="zoom:60%;" />
+
+命中情况，参见OS中Page Fault即可
+
+#### Cache/内存一致性
+
+> 现在，知道了CPU通过Cache访问内存，那么读写过程中是不是会存在问题？读应该没啥问题，因为读Cache和读内存，东西几乎必定是一样的；但是写的过程中，CPU要通过Cache来修改内存，还是直接修改内存呢？这样就会有几种可能，CPU要么改了内存没改Cache、改了Cache没改内存、内存Cache都改了
+
+**读：只读Cache，不读内存！**
+
+**Write Back(写回法)：能写Cache，坚决不写内存**
+
+* 如果我要修改的内存的地址，正好在Cache中有映射，那我就直接修改Cache，不动内存，等这个Cache在替换算法中要被踢出去时，才把Cache中的东西打到内存里
+* 如果我要修改的内存的地址，在Cache中没有映射时，我要先将内存中对应的块替换到Cache中，然后像上面那个一样写，在这个新Cache变成要滚蛋的Cache时打回去
+* CPU改完Cache后，要在这个块上打一个Dirty Bit，表示不干净哩，变成新形状了捏
+
+**Write Through(全写法)：优先写内存**
+
+* 如果我要修改的内存的地址，正好在Cache中有映射，那我就内存Cache同时写
+
+* 如果我要修改的内存的地址，在Cache中没有映射时，那我就不写Cache，直接写内存
+
+  > 如果是Cache内存一起写，那速度不一样，Cache蹭一下写完了，内存还没开始捏，咋办？
+  >
+  > 速度不够，Buffer来凑！
+  >
+  > <img src="img/buf.png" alt="img" style="zoom:60%;" />
+  >
+  > * 写内存的时候专门用一个Buffer来提高速度
+  >
+  > *但还有问题，谁把Buffer里的东西搬到内存中呢？*
+  >
+  > * 在内存上整一个控制器，把Buffer里的东西吸出来
+  >
+  > *但是，还有问题，我要是一下写太多，Buffer就爆了！*
+  >
+  > * 2级Cache就这么来的！
+  >
+  >   <img src="img/2ca.png" alt="img" style="zoom:67%;" />
+  >
+  >   但是2级Cache也要有个写策略：还是写回法！
+
+#### Cache性能分析与优化
+
+<img src="img/xnfx.png" alt="img" style="zoom:60%;" />
+
+**为啥Cache会没命中呢？4C**
+
+* Compulsory - 老天
+  * 冷启动、过程转移、首次引用……不可避免的
+* Capacity - 硬件
+  * 容量不够
+* Conflict - 算法
+  * Cache块间冲突，解决：加容量、提升相联度
+* Coherence(相关)
+  * 其它操作带来的(比如I/O)
+
+<img src="img/cm.png" alt="img" style="zoom:60%;" />
+
+* 多路组相联能够明显降低Miss rate，1路的话需要把Cache size扩大2倍才能达到2路的水平
+
+**加速比**
+
+* CPU访问Cache一次的时间：Tc
+* Cache访问MM一次的时间：Tm
+* 产生缺块中断时，从MM中把数据替换到Cache中的时间：Tb
+* Cache命中率：H
+
+则，若命中了，需要的时间就是Tc；若没命中，需要替换回来再访问Cache，就是Tb + Tc
+
+**由概率论公式，Cache的平均访问周期：**
+
+> T = H * Tc + (1 - H) * (Tb + Tc) = **Tc + (1 - H) * Tb**
+
+加速比(参考Amd定律)
+
+> Sp = Told / Tnew(这里的T都是访问Cache的时间，Tnew也就是Tc)
+
+例：设Cache的速度是主存的5倍，命中率为 95%，则采⽤Cache后性能提升多少?
+
+> 设Cache的访问时间是t，则MM的访问时间5t
+>
+> 也就是
+>
+> * Tc = t
+> * Tb = 5t = Told
+> * Tm = 5t
+>
+> H = 0.95
+>
+> 则若Cache命中，访问时间为t
+>
+> 若Cache没命中，访问时间为t + 5t = 6t
+>
+> 则平均访问时间
+>
+> T = 0.95 * t + (1 - 0.95) * 6t = **t + 0.05 * 5t** = 1.25t
+>
+> Sp = Told / T = 5t / 1.25t = 4
+
+**优化方案**
+
+<img src="img/yh1.png" alt="img" style="zoom:60%;" />
+
+<img src="img/yh2.png" alt="img" style="zoom:60%;" />
+
+---
+
+<img src="img/yh3.png" alt="img" style="zoom:60%;" />
+
+* 块大了，块数就少了，缺块中断更多了
+
+<img src="img/yh4.png" alt="img" style="zoom:60%;" />
+
+---
+
+
+
+<img src="img/yh5.png" alt="img" style="zoom:60%;" />
+
+<img src="img/yh6.png" alt="img" style="zoom:60%;" />
+
+---
+
+**优化方案4：多级Cache**
+
+总失效率 = 第一级失效率 * 第二级失效率 * ……
+
+例：访问内存需50ns, L1 1ns 10%失效率，L2 5ns 1%失效率，L3 10ns 0.2%失效率，求L1， L1+L2, L1+L2+L3构架下的平均访问时间
+
+> 利用上面的公式算：
+>
+> * L1
+>
+>   T = 1 + 10% * 50 = 6(ns)
+>
+>   ***问题：`90% * 1 + 10% * (1 + 50)`为啥不是`90% * 1 + 10% * (1 + 50 + 1)呢？应该是1级Cache没命中，但也访问了，用了1，然后从MM中搬数据，用了50，最后访问1级Cache，用了1`***
+>
+> * L1 + L2
+>
+>   T = 90% * 1 + (10% * 99%) * (1 + 5) + (10% * 1%) * (**50 + 5 + 1**) = 1.55(ns)
+>
+>   ~~***这里，CPU不能直接访问二级Cache，所以这个50+5+1代表：如果一二级Cache都没命中，要先从MM里搬到2级Cache是50，然后从二级Cache搬到一级Cache是5，CPU再访问一级Cache是1***~~
+>
+> * L1 + L2 + L3
+>
+>   T = 90% * 1 + (10% * 99%) * (1 + 5) + (10% * 1% * 99.8%) * (1 + 5 + 10) + (10% * 1% * 0.2%) * (50 + 10 + 5 + 1) = 1.5101
+
