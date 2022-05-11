@@ -2351,3 +2351,114 @@ How do we implement file?
 
 ### Principles of I/O Hardware
 
+对于操作系统开发者，关心硬件要关心到什么程度？-> API
+
+<img src="img/std.png" alt="img" style="zoom:67%;" />
+
+可以看到，假设两个键盘厂商生产两个键盘，接口都不一样，操作系统为了适配这两种键盘，就要设计两套接口，太麻烦也太浪费。解决办法，就是**将这些设备分类，为每一类设备提供一套接口**
+
+**Device Classification**
+
+* Block Device -> 硬盘等可以随机读取
+* Character Device -> 键盘等只能顺序读取
+
+This is not very good : Clock device should belong to ?
+
+* 分类太笼统
+
+Where do we get the specification of Device Interface?
+
+* hand book
+
+**Device Controller**
+
+> ~~I/O units often consist of a mechanical component and an electronic compo-nent. It is possible to separate the two portions to provide a more modular andgeneral design. The electronic component is called the device controller or adapter.~~ 
+>
+> 这种定义的问题：有一些设备比如SSD，全是电子部分，没有机械部分，那就分不出来那一部分是Device Controller
+>
+> * 设备通常分为控制部分和被控制部分，那控制部分就叫做设备控制器
+>
+> 设备控制器的作用
+>
+> * 设备寄存器上每一位代表一个作用，合起来表示一个功能，用来控制设备
+
+**I/O Address Access**
+
+I/O设备和它们提供的API也是有地址的，那怎么知道我访问的地址存的不是程序或者数据，而是一个I/O设备呢？
+
+* Separate I/O and memory space
+
+  <img src="img/smi.png" alt="img" style="zoom:67%;" />
+
+  > 需要用特殊指令加上地址，表示访问的是IO space
+
+* Memory-Mapped I/O
+
+  <img src="img/mmi.png" alt="img" style="zoom:67%;" />
+
+  > 不管在内存还是IO，用一种指令就行，比如MOVE
+
+* Hybrid
+
+  <img src="img/hy.png" alt="img" style="zoom:67%;" />
+
+> 当今的CPU，采用的一般是Hybrid结构，早期的外设很慢，和CPU啥的是挂在不同的Address Bus上，所以用两种不同的指令访问不同的地址空间，也就是Separate类型，这样会比较快。后来外设(比如显存)越来越快，甚至和MM不相上下，所以和MM一块编址更加方便。而为了向前兼容，使用Hybrid
+
+**Bus connection**
+
+总线的链接有两种方式
+
+* CPU，IO，MM用一根总线
+
+  <img src="img/algo.png" alt="img" style="zoom:67%;" />
+
+* 在上面的基础上，CPU和MM之间搭了一根高速总线
+
+  <img src="img/gs.png" alt="img" style="zoom:67%;" />
+
+**DMA(Direct Memory Access)**
+
+* DMA负责把外设里东西读到内存里
+
+> 如果没有DMA，CPU想要读硬盘里的东西，要等很长时间，这个时间里CPU本来可以干其他的事。因此把这个工作交给DMA。**当CPU要读IO时，分配给DMA任务，DMA来控制读IO，当把内容读到MM后，通知一下CPU说我干完了就行**
+
+<img src="img/dma.png" alt="img" style="zoom:67%;" />
+
+* Address，Count，Control都是CPU给DMA发的，告诉它应该从哪儿读，读多少，是读还是写
+* **DMA在控制IO和MM进行读取的时候，完全不需要CPU干预，只是在读完的时候产生中断通知CPU我干完活了**
+
+**DMA Working Mode**
+
+* Fly-by
+
+  MM和IO之间直接传数据
+
+* Cached
+
+  先把MM或者IO里的数据放到DMA中，DMA再把数据放到IO或者MM中，类似中转站
+
+*Does DMA really improve  the access speed?*
+
+> No. 一般情况下，内存在同一时刻只允许别人对它的一个地址进行访问(除非是多端口内存)，这样在IO和MM进行数据传输的时候，CPU无法访问MM，**不能做到拷数据的时候同时CPU处理数据**；另外，MM和IO设备之间的传输是要靠总线的，而总线一般只允许一个地址和一个数据在跑，这样**DMA在用总线的时候CPU就不能用**，也会产生冲突
+
+**Interrupt**
+
+<img src="img/it.png" alt="img" style="zoom:67%;" />
+
+* 和使用DMA的区别：需要CPU亲自来把IO的东西塞到内存里。比如一个IO设备每次只能发一个字节，而CPU要读取1000个字节。那么如果使用DMA，只会在最后一次读完之后给CPU发送一个中断；而Interrupt方式每准备好一个字节都会给CPU发一个中断
+
+> CPU上有一个引脚，接的就是这个Interrupt Controller，当Disk发生一个中断，IC就会将这个中断传导给CPU，CPU就会放下当前手里的活去干Disk的事。而要干的这个事叫做中断处理程序。当有很多个设备同时给IC发中断时，IC就体现出了裁决的作用，判断哪个中断的优先级更高，先干重要的事儿
+>
+> 那CPU是咋知道这个中断是谁发出的呢？通过中断向量。中断向量就是一个数，由IC给它们编号，CPU通过这个数就能判断是谁发的中断。那咋判断呢？内存里有一个叫中断向量表的东西，其实就是个数组，下标就是中断向量，里面存的内容就是每一个中断处理程序的起始地址(函数指针)
+
+*OS启动的时候，要初始化IC的什么？*
+
+* 不同设备的id -> Plug Play
+* 中断向量表
+* **中断的优先级**
+
+一般硬件设备在刚开始就初始化好了，不再进行调整
+
+**Precise/Imprecise Interrupt**
+
+> CPU执行指令通常要取地址，解码，执行，写回，这样如果能并行的话，可以让第一条指令在执行的时候，第二条指令在解码，第三条指令刚取完地址，这样可以提高吞吐量。那么，如果一个中断处理程序这时候要被执行，那这三条指令怎么办？如果把没有正在执行的指令立即清空(**不能清空正在执行的指令，否则会有严重后果**)并加载中断程序，就叫做Precise Interrupt。好处是响应时间短，坏处是那些本来要执行的指令被浪费了；如果只是关上大门，等门里的指令都执行完，CPU闲下来之后再加载中断程序，这就叫做Imprecese Interrupt。好处是指令没有被浪费，坏处是中断响应时间长
