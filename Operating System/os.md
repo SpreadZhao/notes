@@ -2462,3 +2462,87 @@ I/O设备和它们提供的API也是有地址的，那怎么知道我访问的�
 **Precise/Imprecise Interrupt**
 
 > CPU执行指令通常要取地址，解码，执行，写回，这样如果能并行的话，可以让第一条指令在执行的时候，第二条指令在解码，第三条指令刚取完地址，这样可以提高吞吐量。那么，如果一个中断处理程序这时候要被执行，那这三条指令怎么办？如果把没有正在执行的指令立即清空(**不能清空正在执行的指令，否则会有严重后果**)并加载中断程序，就叫做Precise Interrupt。好处是响应时间短，坏处是那些本来要执行的指令被浪费了；如果只是关上大门，等门里的指令都执行完，CPU闲下来之后再加载中断程序，这就叫做Imprecese Interrupt。好处是指令没有被浪费，坏处是中断响应时间长
+
+### Principles of I/O Software Layers
+
+I/O软件设计采用分层架构
+
+<img src="img/layer.png" alt="img" style="zoom:67%;" />
+
+*为什么采用分层？*
+
+* 封装I/O硬件的实现细节
+* 方便定制，在改动代码时可以尽可能地复用之前的部分(比如内存分配函数)
+
+**Device driver**
+
+比如显卡驱动，鼠标驱动，键盘驱动啥的，**而一般来讲一个Device driver就会包括一个Interrupt handler**
+
+**Interrupt handler**
+
+大体过程上面说过了，这里说一些要执行的操作
+
+1. Save regs not already saved by interrupt hardware(保存现场)
+2. Set up context for interrupt service procedure(TLB, Page Table...)
+3. Set up stack for interrupt service procedure
+4. Ack interrupt controller, reenable interrupts
+5. Copy registers from where saved to the process table
+6. Run service procedure
+7. Set up MMU context for process to run next
+8. Load new process' registers
+9. Start running the new process
+
+重要：中断向量号，保存现场，创建Context(函数堆栈等)
+
+**Device Driver**
+
+写一个驱动程序的时候，不仅要关心操作系统的接口，还要关心硬件的接口，就像之前说的，一个SSD和U盘，都可以用read函数来读，那肯定是利用多态来定位到ssd_read或者flash_read。
+
+<img src="img/jk.png" alt="img" style="zoom:67%;" />
+
+**Device-Independent I/O Software**
+
+<img src="img/fi.png" alt="img" style="zoom:67%;" />
+
+> 虚拟文件系统就是一种Device-Independent Software
+>
+> The basic function of the device-independent software is to perform the I/O functions that are **common to all devices** and to provide a uniform interface to the user-level software. 
+
+提供统一接口的好处
+
+<img src="img/hc.png" alt="img" style="zoom:67%;" />
+
+> TCP-IP网卡，不管是啥牌子的网卡，都可以用Socket做
+
+关于其中的Buffering
+
+<img src="img/bf.png" alt="img" style="zoom:67%;" />
+
+* 不用buffer，有可能会丢数据
+* 把buffer放在User space，如果那个page被swap out了咋办？
+* 把buffer放在kernel space，要拷贝的话有开销，而且通常一个buffer不够用，要开两个，在正在copy的时候，有新的数据来了咋办？
+* Double buffer, after the first buffer fills up, but before it has been emptied, the second one is used. When the second buffer fills up, it is available to be copied to the user (assuming the user has asked for it). **While the second buffer is being copied to user space, the first one can be used fornew characters.** In this way, the two buffers take turns: while one is being copied to user space, the other is accumulating new input. 
+
+如果把buffer放在内核态，会有copy问题
+
+<img src="img/cppb.png" alt="img" style="zoom:67%;" />
+
+> 拷一个buffer要这么多次copy，那像百度网盘(网络其实也可以看做像硬盘、键盘这样的IO设备)那种在线看视频的话，会非常慢，因此这种会有特定优化，将buffer直接放在User space，并且操作的进程要进行保护，普通用户根本没有权限访问
+
+**I/O Software**
+
+*I/O处理函数位于Kernel Space，那么用户怎样才能调用I/O处理函数？*
+
+* System Call*
+* 前面说过系统调用和内核函数的区别，是通过**软中断**从User Space切换到Kernel Space
+
+系统调用实现的具体过程
+
+> Intel的CPU有一个INT指令，就是一个软中断程序，这个指令有一个编号，就是0x80(中断向量)。但是，对于同一个IO设备，可能会有多个中断处理程序，而且，一个CPU的中断向量表的大小通常是255个，不够大，还有各种外设，硬盘键盘等都会有很多中断处理程序，那这个中断向量表就很有可能不够用了，那咋办？解决方法是复用某些中断向量号。**其中，只要接收到0x80，系统就会认为这个<u>中断处理程序是系统调用</u>**，那问题又来了，只知道是系统调用，还不知道是read，write还是啥捏？还有一个系统调用号，还有一个系统调用表，下标就是系统调用号，内容是系统调用函数的指针
+
+整个调用的流程
+
+<img src="img/zlc.png" alt="img" style="zoom:67%;" />
+
+> 比如printf函数就是一个User process，调用屏幕的驱动，系统调用write
+
