@@ -1147,3 +1147,76 @@ POP X 				;保存最后运算结果
 * 让操作数多的指令opcode更短
 * 让操作数少的指令opcode更长
 
+### 可执行程序
+
+<img src="img/ne.png" alt="img" style="zoom:60%;" />
+
+<img src="img/ne23.png" alt="img" style="zoom:60%;" />
+
+<img src="img/ne3.png" alt="img" style="zoom:60%;" />
+
+<img src="img/ne4.png" alt="img" style="zoom:60%;" />
+
+<img src="img/ne5.png" alt="img" style="zoom:60%;" />
+
+<img src="img/sh.png" alt="img" style="zoom:60%;" />
+
+<img src="img/sh2.png" alt="img" style="zoom:60%;" />
+
+* Stack：一般放一些长度已知的静态变量(int)，在程序结束之后就回收了
+* Heap：分配的内存(malloc, new)
+* 比如我`String a = new String();` 那么这个a是在Stack中，而a这个引用指向的空间在Heap中
+
+### CPU内部寄存器
+
+<img src="img/reg.png" alt="img" style="zoom:60%;" />
+
+**数据寄存器-算数**
+
+* AX(能用AX搞定尽量用AX，少用下面的)
+* BX
+* CX
+* DX
+
+**指针寄存器-告诉各种段在哪儿**
+
+* SP - 堆栈指针
+* BP - 基数指针，存放整个程序的起始地址，为了整个程序的平移
+* SI - 源变址，src
+* DI - 目的变址，dst
+
+**控制寄存器-程序执行**
+
+* IP - Program Counter，指向下一条执行的指令
+
+* PSW - 状态标志，有没有错误，有没有溢出，有没有进位等
+
+  <img src="img/psw.png" alt="img" style="zoom:60%;" />
+
+**段寄存器**
+
+* CS - 代码段
+* DS - 数据段
+* SS - 堆栈段
+* ES - 附加段
+
+**8086物理地址计算**
+
+<img src="img/wl.png" alt="img" style="zoom:60%;" />
+
+> 这个07100是咋算出来的呢？首先这些数都是16进制，然后，CS的地址是0700，IP的地址是0100，在8086CPU中，只有16根地址线，理论上只能访问2^16 = 64KB内存，但是实际上能访问2^20 = 1MB内存，这是为什么？就是因为它实际的物理地址是由`段地址<<4 + 偏移量`算出来的，而二进制的段地址左移四位就是16进制的*16也就是加上个0，然后再加上偏移量。
+
+<img src="img/20201.png" alt="img" style="zoom:60%;" />
+
+<img src="img/20202.png" alt="img" style="zoom:60%;" />
+
+**MOV**
+
+<img src="img/mov.png" alt="img" style="zoom:60%;" />
+
+立即数不能直接传到段寄存器
+
+<img src="img/noi.png" alt="img" style="zoom:60%;" />
+
+* 立即数就是常量
+
