@@ -2445,7 +2445,7 @@ I/O设备和它们提供的API也是有地址的，那怎么知道我访问的�
 
 <img src="img/it.png" alt="img" style="zoom:67%;" />
 
-* 和使用DMA的区别：需要CPU亲自来把IO的东西塞到内存里。比如一个IO设备每次只能发一个字节，而CPU要读取1000个字节。那么如果使用DMA，只会在最后一次读完之后给CPU发送一个中断；而Interrupt方式每准备好一个字节都会给CPU发一个中断
+* **和使用DMA的区别**：需要CPU亲自来把IO的东西塞到内存里。比如一个IO设备每次只能发一个字节，而CPU要读取1000个字节。那么如果使用DMA，只会在最后一次读完之后给CPU发送一个中断；而Interrupt方式每准备好一个字节都会给CPU发一个中断
 
 > CPU上有一个引脚，接的就是这个Interrupt Controller，当Disk发生一个中断，IC就会将这个中断传导给CPU，CPU就会放下当前手里的活去干Disk的事。而要干的这个事叫做中断处理程序。当有很多个设备同时给IC发中断时，IC就体现出了裁决的作用，判断哪个中断的优先级更高，先干重要的事儿
 >
@@ -2545,4 +2545,266 @@ I/O软件设计采用分层架构
 <img src="img/zlc.png" alt="img" style="zoom:67%;" />
 
 > 比如printf函数就是一个User process，调用屏幕的驱动，系统调用write
+
+**Programmed I/O**
+
+比如要打印一个字符串，在CPU发送打印一个字符的指令之后，执行打印的过程是很慢的，CPU不能紧接着又发一个打印指令，因此在发送之前要检查打印机的状态。这样的话打印机就会有两个Reg，一个用来接收打印字符，一个用来表明自己的状态是Ready还是Busy
+
+<img src="img/pt.png" alt="img" style="zoom:67%;" />
+
+这样CPU的程序就是这样的
+
+```c
+copy_from_user(buffer, p, count);		    /* p is the kernel buffer */
+for(i = 0; i < count; ++i){				   /* loop on every character */
+    while(*printer_stats_reg != READY);		/* loop until ready */
+    *printer_data_reg = p[i];
+}
+return_to_user();
+```
+
+* 浪费CPU时间用来检查状态
+
+**Interrupt-Driven I/O**
+
+* 让CPU在I/O时能干别的事，等I/O完事了给CPU发个中断就行，就像前面说的
+
+```c
+//当系统调用时
+copy_from_user(buffer, p, count);
+enable_interrupts();
+while(*printer_status_reg != READY);
+*printer_data_reg = p[0];
+scheduler();
+
+//打印机中断程序
+if(count == 0){						/* 没有字符要打了 */
+    unblock_user();					/* 解除用户进程阻塞 */
+}else{
+    *printer_data_reg = p[i];
+    count--;
+    i++;
+}
+acknowledge_interrupt();
+return_from_interrupt();
+```
+
+**Using DMA**
+
+前面都说的差不多了，主要就是DMA和Interrupt的区别
+
+```c
+copy_from_user(buffer, p, count);
+set_up_DMA_controller();
+scheduler();
+
+acknowledge_interrupt();
+unblock_user();
+return_from_interrupt();
+```
+
+> Programmed I/O虽然速度慢，但现在还在用。有的I/O设备速度非常快，那么CPU如果用中断的话，刚准备去干别的事，中断马上来了，这时候CPU就要立刻放下刚要干的别的事，保存好现场，要执行好多微指令，然后去发下一个I/O任务，这样就本末倒置了，所以在快的I/O设备上Programmed还是适用的(比如千兆的网卡)
+
+**Key Issues**
+
+* Device independence: programs can access any I/O device without specifying device in advance
+
+  比如read一个设备，就用read，不read_xxx
+
+* Uniform naming
+
+  统一命名，比如访问键盘用dev_keyboard，访问硬盘用一个地址，那就不统一。便于移植
+
+* Error handling
+
+  出错时，尽可能处理靠硬件的方面(那个分层，往下)，因为很多硬件都是有自动纠错功能的。出错先问问自己！然后再问别人
+
+* Synchronous or asynchronous
+
+  是等着IO写完再干活还是一边IO一边干
+
+* Buffering
+
+  命中率，一致性
+
+* Sharable or dedicated devices
+
+  硬盘能共享，磁带不能，很专一
+
+### Hardwares
+
+**Disks**
+
+两种硬盘的参数
+
+<img src="img/td.png" alt="img" style="zoom:67%;" />
+
+* Server disk and PC disk: Server的更贵，存储密度低，通常一个文件分散在多个硬盘上，可以多个硬盘一块儿读，效率高
+
+新老硬盘对比
+
+<img src="img/no.png" alt="img" style="zoom:67%;" />
+
+* 左新右旧
+* 新硬盘每道的扇区数不一样，存储密度高，能做到更大容量
+* 老式硬盘结构简单，只需要恒定转速即可
+
+RAID(Redundant Array of Inexpensive / Independent Disks)
+
+<img src="img/raid.png" alt="img" style="zoom:67%;" />
+
+* RAID0: 不保存数据，没有备份
+* RAID1: 保存一份(后面的阴影)
+* RAID2: 按位存，但是硬盘都是按块存的，咋整？把文件块拆开，**一个块里存这些字节的第一bit**，下一块存这些字节的第二bit……
+* RAID3: 比2多一个校验位
+* RAID4: 比0多一个校验位
+* RAID5: 4有个问题，每访问一块都要访问最后的校验位，所以把校验位分散在磁盘中
+
+**Disk Formatting**
+
+<img src="img/ds.png" alt="img" style="zoom:67%;" />
+
+* Preamble: 标志一个扇区的开始，ECC校验位
+* 低级格式化：格式化出扇区，高级格式化：格式化出一些管理数据(bitmap, superblock...)，所以尽量做高级格式化，做低级格式化要把所有扇区重新建一遍，对硬盘损伤很大
+
+<img src="img/df.png" alt="img" style="zoom:67%;" />
+
+* 第一圈的0和第二圈的0没对齐：为了优化
+
+**Disk Arm Scheduling Algorithms**
+
+3 factors
+
+* Seek time(Major)
+* Rotational delay
+* Actual data transfer time
+
+Shorted Seek First(SSF)
+
+<img src="img/ssf.png" alt="img" style="zoom:67%;" />
+
+> 假设现在在11，然后读11的时候，来了一堆请求 ，要读12,9,16,1,34，那就看这几个里谁离11最近读谁，那就是12，然后再看剩下的谁离12最近，9，所以读9……然后算seek motion就是看11读12挪了1,12读9挪了3
+
+Elevator
+
+<img src="img/ele.png" alt="img" style="zoom:67%;" />
+
+> 就和坐电梯一样，只能往一个方向走，只有目的地都在另一边时才转向
+
+**Error handling**
+
+<img src="img/eh.png" alt="img" style="zoom:67%;" />
+
+> 有保留扇区，如果第七块坏了，就把保留扇区替换那块坏的，号还是7
+
+**CD-ROM**
+
+<img src="img/cdr.png" alt="img" style="zoom:67%;" />
+
+* 比如有坑是0，凸起是1，那就能存数据了
+
+**Stable Storage**
+
+<img src="img/ss.png" alt="img" style="zoom:67%;" />
+
+> 两块盘
+>
+> * a：在写1之前出错，没啥事，重启就行了
+> * b：在写1时出错，根据transaction原理，要恢复到没写时的状态，所以2号上的备份恢复到1号上就行
+> * c，d：写2之前和写2时错误，那把1号上的复制到2号上就行了
+> * e：写完2出错，那随便出
+
+**Clock**
+
+<img src="img/cl.png" alt="img" style="zoom:67%;" />
+
+> Crystal oscillator：发射方波，发一个Counter减一下，减到0后就发一个中断
+
+**Soft Timer**
+
+<img src="img/scl.png" alt="img" style="zoom:67%;" />
+
+> 用一个时钟通过软件来模拟多个时钟
+
+**Terminal**
+
+比如用户想要访问远方的一个主机，那就用一套硬件练到远方的主机上，这套硬件就叫做一个终端
+
+<img src="img/ter.png" alt="img" style="zoom:67%;" />
+
+> 比如登陆网站访问网页，那当前的电脑就可以叫终端，只不过这个终端是智能终端，早期的终端没有CPU啥的东西，只有键盘鼠标显示器，所以通过一个接口RS-232
+
+*多个用户访问一个服务器，怎么确保服务端发回给用户的信息是对应的？*
+
+Section management
+
+<img src="img/sm.png" alt="img" style="zoom:67%;" />
+
+**GUI Software**
+
+<img src="img/gui.png" alt="img" style="zoom:67%;" />
+
+```c
+#include <windows.h>
+int WINAPI WinMain(HINSTANCE h, HINSTANCE, hprev, char*szCmd, int iCmdShow){
+    WNDCLASS wndclass; 			/*class object for this window*/
+    MSG msg; 					/*incoming messages are stored here*/
+    HWND hwnd; 					/*handle (pointer) to the window object*/
+    /*Initialize wndclass*/
+    wndclass.lpfnWndProc = WndProc; 			/*tells which procedure to call*/
+    wndclass.lpszClassName = "Program name"; 		/*text for title bar*/
+    wndclass.hIcon = LoadIcon(NULL, IDI APPLICATION); 	/*load program icon*/
+    wndclass.hCursor = LoadCursor(NULL, IDC ARROW); 	/*load mouse cursor*/
+    RegisterClass(&wndclass); 				/*tell Windows about wndclass*/
+    hwnd = CreateWindow ( ... ) 			/*allocate storage for the window*/
+    ShowWindow(hwnd, iCmdShow); 			/*display the window on the screen*/
+    UpdateWindow(hwnd);				 /*tell the window to paint itself*/
+    while (GetMessage(&msg, NULL, 0, 0)) { 			/*get message from queue*/
+    Tr anslateMessage(&msg); 			/*translate the message*/
+    DispatchMessage(&msg); 				/*send msg to the appropriate procedure*/
+}
+	return(msg.wParam);
+}
+
+
+long CALLBACK WndProc(HWND hwnd, UINT message, UINT wParam, long lParam){
+    /*Declarations go here.*/
+    switch (message) {
+        case WM CREATE: ... ; retur n ... ; /*create window*/
+        case WM PAINT: ... ; retur n ... ; /*repaint contents of window*/
+        case WM DESTROY : ... ; retur n ... ; /*destroy window*/
+	}
+    return(DefWindowProc(hwnd, message, wParam, lParam)); /*default*/
+}
+```
+
+
+
+> Call Back Function: 回调函数
+>
+> 回调函数不是由用户来调用，是由操作系统调用
+
+**Font**
+
+存字体，用矢量图存，存特定的点以及点和点之间的关系，每放大一下，就算一下
+
+**X Window**
+
+可以在网络上进行图像的处理
+
+<img src="img/xw.png" alt="img" style="zoom:67%;" />
+
+> **Exercise: **虚拟机Linux，然后Windows上下X Window程序，然后"远程"连接虚拟机
+
+**Power Management**
+
+<img src="img/pm.png" alt="img" style="zoom:67%;" />
+
+> 显示器省电，window1要显示要点亮9块，那把它移到左上角，就只点亮4块了
+
+<img src="img/pmc.png" alt="img" style="zoom:67%;" />
+
+> CPU省电
+
+*其他省电方式*
 
