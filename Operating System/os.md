@@ -688,9 +688,9 @@ Result
     ```java
     public class ProducerConsumer {
         static final int N = 100; 						// constant giving the buffer size
-        static producer p = new producer( ); 			 // instantiate a new producer thread
-        static consumer c = new consumer( );			 // instantiate a new consumer thread
-        static our monitor mon = new our monitor( );	  // instantiate a new monitor
+        static producer p = new producer(); 			 // instantiate a new producer thread
+        static consumer c = new consumer();			 // instantiate a new consumer thread
+        static our monitor mon = new our monitor();	  // instantiate a new monitor
         
         public static void main(String args[]) {
             p.start(); 									// start the producer thread
@@ -723,7 +723,7 @@ Result
             private int buffer[] = new int[N];
             private int count = 0, lo = 0, hi = 0; 		 // counters and indices
             public synchronized void insert(int val) {
-                if (count == N) go to sleep( ); 	 // if the buffer is full, go to sleep
+                if (count == N) go to sleep(); 	 // if the buffer is full, go to sleep
                 buffer [hi] = val; 					// inser t an item into the buffer
                 hi = (hi + 1) % N; 					// slot to place next item in
                 count = count + 1; 					// one more item in the buffer now
@@ -739,8 +739,8 @@ Result
                 if (count == N − 1) notify(); 		// if producer was sleeping, wake it up
                 return val;
             }
-            private void go_to_sleep( ) { 
-                try{wait( );} catch(Interr uptedException exc) {};}
+            private void go_to_sleep() { 
+                try{wait();} catch(InterruptedException exc) {};}
             }
     }
     ```
