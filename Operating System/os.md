@@ -2665,7 +2665,7 @@ RAID(Redundant Array of Inexpensive / Independent Disks)
 <img src="img/ds.png" alt="img" style="zoom:67%;" />
 
 * Preamble: 标志一个扇区的开始，ECC校验位
-* 低级格式化：格式化出扇区，高级格式化：格式化出一些管理数据(bitmap, superblock...)，所以尽量做高级格式化，做低级格式化要把所有扇区重新建一遍，对硬盘损伤很大
+* 低级格式化：格式化出扇区，高级格式化：格式化出一些管理数据(bitmap, superblock...)，**存放在Data里面**。所以尽量做高级格式化，做低级格式化要把所有扇区重新建一遍，对硬盘损伤很大
 
 <img src="img/df.png" alt="img" style="zoom:67%;" />
 
