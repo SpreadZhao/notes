@@ -1315,7 +1315,7 @@ IP指针始终指向下一行指令
 
   > 下一条IP会指向0105
 
-#### 段内直接寻址
+**段内直接寻址**
 
 就像c语言里的goto语句一样
 
@@ -1349,10 +1349,263 @@ loop haha
 <img src="img/exe.png" alt="img" style="zoom:60%;" />
 
 > 首先，开始分段了，那么从哪里开始呢？汇编这一点设计的很奇葩，是用`end`来表示从哪儿开始。那个end start表示从start开始，而前面就有start:的标记。这个就是和c语言的main函数比较像
+>
+> 另外，这个程序是怎么知道是在code段开始运行呢？可以做一个实验：把code改一个名字，比如code1，这样的话，这个程序一运行就会从第一行开始，也就是把data段里的东西当成一个指令去运行，那这样肯定就崩了。
+>
+> 再看code段之中的一些东西：在`; add your code here`之前，有几句话，他们就是为程序执行做一些准备工作的。首先，将data段的地址存在ax中，然后再将这个地址分别存在ds，es中。这样的话，ds就保存了data段的起始地址
 
 **com和exe的区别**
 
 以前，是有一种可执行文件叫xxx.com的，这种文件的特点就是甭管什么东西，全都堆在一个段里，只有一个段。那这种特性就导致了它的大小是有上限的。那上限是多少呢？取决于8086的最大偏移量。之前介绍的，8086的物理地址是由段地址 << 4 + 偏移量得到的，那有没有想过，那个段地址，偏移量都是在哪儿得到的？答案是：都是从地址线。那地址线有16根，**也就决定了段的起始地址和偏移量都是16位的**。就像emu8086截图中，那个上面的框里，比如`0700:0100`就分别是段地址和偏移量的16位表示。8086这样的分配其实是有缺陷的。比如会超出20位的表达(段地址和偏移量都是ffffh)，也有可能会在一个段中跳到另一个段。至于是怎么解决 的这里不提，只要记住.com文件的最大就是64k(一个段的大小)即可
 
 > *问题：那么这种设计方式，是不是要走地址线两次才能得到一个物理地址呢？*
+
+![img](img/xz.png)
+
+#### 8086指令系统
+
+其实就是讲汇编
+
+首先，把默认的exe模板修改一下
+
+```assembly
+; multi-segment executable file template.
+
+data segment
+    ; add your data here!
+    pkey db "press any key...$"
+ends
+
+stack segment
+    dw   128  dup(0)
+ends
+
+code segment
+start:
+; set segment registers:
+    mov ax, data
+    mov ds, ax
+    mov es, ax
+
+    ; 在这儿先把3放到si里
+    mov si, 3        
+    lea dx, pkey[si]	; 然后在pkey后面加上偏移量
+    mov ah, 9
+    int 21h        ; output string at ds:dx
+    
+    ; wait for any key....    
+    mov ah, 1
+    int 21h
+    
+    mov ax, 4c00h ; exit to operating system.
+    int 21h    
+ends
+
+end start ; set entry point and stop the assembler.
+
+```
+
+执行的结果是这样的
+
+![img](img/jg.png)
+
+也就是相当于从pkey的第3号开始读取(本来是从0号)
+
+我们看一下它翻译的汇编是什么样的
+
+<img src="img/nodb.png" alt="img" style="zoom:60%;" />
+
+> 可以看到，翻译的结果是`LEA DX, [SI]`，就是从数据段偏移si个单位后的值，这和之前说的一样
+
+现在再来一个实验：在数据段的代码上再加个定义
+
+```assembly
+...
+data segment
+    ; add your data here!
+    haha db "hehe$"
+    pkey db "press any key...$"
+ends
+...
+```
+
+> 多了一个hehe，会怎么样呢？看看结果
+
+发现，最终的结果运行一样，但是翻译的汇编代码发生了变化
+
+<img src="img/yesdb.png" alt="img" style="zoom:60%;" />
+
+> 联想一下c语言的数组，聪明的你一定能发现规律的！这里只留下一个问题：*为什么有时候后面没有+xxh这种，有时候有呢？*
+
+下面一个例子
+
+```assembly
+; multi-segment executable file template.
+
+data segment
+    ; add your data here!
+    pkey db "press any key...$"
+ends
+
+stack segment
+    dw   128  dup(0)
+ends
+
+code segment
+start:
+; set segment registers:
+    mov ax, data
+    mov ds, ax
+    mov es, ax
+    
+    ; add your code here
+            
+    mov al, pkey
+ends
+
+end start ; set entry point and stop the assembler.
+```
+
+这里只干一件事：把pkey挪到al中，首先要注意：pkey是8bit，而ax是16bit的，所以不能这样写，只能赋值给ax中的al或者ah。
+
+看一下编译后的汇编代码
+
+`MOV AL, [00000h]`
+
+这是什么意思呢？就像上面的例子一样，pkey是ds中的第一个，所以是起始位置，偏移量就是0，将其中所存的东西赋值给al，那结果是什么呢？
+
+![img](img/al.png)
+
+可以看到，ax变成了0770，那是为什么呢？看一下变量窗口
+
+![img](img/bl1.png)|![img](img/bl2.png)
+
+这样就能得到结论：是把第一个字节里的ascii码的16进制存到了al中
+
+然后，在这个例子下面再加一句`lea ax, pkey`并执行，结果是这样的
+
+<img src="img/lea.png" alt="img" style="zoom:60%;" />
+
+比较这两行代码的区别，可以看出，一个是加载那块地址里的值，另一个是直接把这个地址当成一个数赋值。那很显然我们已经能猜到ax在执行完lea后的结果了，一定是
+
+![img](img/ax.png)
+
+> lea: Load Effective Address，加载的是有效地址
+
+那么再一个实验，像刚才一样在数据段加一个haha，结果是什么样呢？
+
+……
+
+然后是堆栈的操作
+
+```assembly
+org 100h
+
+; 设置栈段起始地址
+mov ax, 8000h
+mov ss, ax
+
+; 设置栈顶指针(这个栈顶端距离8000h的偏移量)
+; 这里是8000h : 2000h
+mov sp, 2000h
+
+; 设置一个用来往里压的数，另一个就现成的ax
+mov dx, 3e4ah
+
+push dx
+push ax
+
+ret
+```
+
+这段代码的执行结果
+
+<img src="img/stack.png" alt="img" style="zoom:60%;" />
+
+* 栈顶指针是2000，那压进来的东西都在2000的后面
+* **高地址是栈底，低地址是栈顶(操作系统也提到过)**
+* 每一个地址之间都是差2，即2000 - 2 = 1ffe；1ffe - 2 = 1ffc……
+
+为了补充说明第二点，再加上一个操作
+
+<img src="img/stack2.png" alt="img" style="zoom:60%;" />
+
+> 可以看到，bx变成了1ffc，也就是栈顶指针，那么也就是说，sp会随着压栈和弹栈而改变，并且如果有元素的话，始终指向最上面那个元素
+
+然后是出栈
+
+<img src="img/pop.png" alt="img" style="zoom:60%;" />
+
+> 执行完之后，发现栈清空，dx和bx分别变成了之前的8000和3e4a
+
+然后是运算，这里只举加法的例子
+
+```assembly
+mov ax, 5			; AX = 00 0E
+mov bx, 7			; BX = 00 07
+
+add ax, bx			; AX = 00 0C
+add ax, 3			; AX = 00 0F
+
+add ax, 0xffff		; AX = 00 0E
+
+adc bx, 1			; BX = 00 09
+```
+
+* 在加0xffff时，会发现溢出，而000f + ffff = 1000e，因此只会保留最后的000e
+
+* `adc`表示Add with carry flag，观察标志寄存器会发现，在`add ax, 0xffff`执行完后，会有如下情况
+
+  <img src="img/flag.png" alt="img" style="zoom: 67%;" />
+
+  因此后面的`adc bx, 1`会将bx，1，cf的值加到一起后赋给bx
+
+* 注意，cf的值只是在溢出后的一条**运算**指令内会是1，之后又会清零，所以要趁早使用adc
+
+> **加法指令**
+>
+> * ADD OPRD1，OPRD2 ;(add)
+>   功能： （OPRD1）＋（OPRD2）→ (OPRD1)
+> * ADC OPRD1，OPRD2 ;(add with carry)
+>   功能： （OPRD1）＋（OPRD2）＋CF → (OPRD1)
+> * INC OPRD ;(increment)
+>   功能： （OPRD）＋1 → (OPRD)
+>
+> **运算标志位**
+>
+> 1. 进位标志CF(Carry Flag)
+> 2. 奇偶标志PF(Parity Flag)
+> 3. 辅助进位标志AF(Auxiliary Carry Flag)
+> 4. 零标志ZF(Zero Flag)
+> 5. 符号标志SF(Sign Flag)
+> 6. 溢出标志OF(Overflow Flag)
+>
+> **状态控制标志位**
+>
+> 1. 追踪标志TF(Trap Flag)
+> 2. 中断允许标志IF(Interrupt-enable Flag)
+> 3. 方向标志DF(Direction Flag)
+>
+> **减法指令**
+>
+> * SUB OPRD1，OPRD2 ;(减！)
+>   功能： （OPRD1）-（OPRD2）→（OPRD1）
+> * SBB OPRD1，OPRD2 ;(借位减！)
+>   功能： （OPRD1）-（OPRD2）- CF →(OPRD1)
+> * DEC OPRD ;(⾃减！)
+>   功能： （OPRD）-1 → (OPRD)
+> * NEG OPRD ;(negate) 取补指令
+>   功能： FFFFH -（OPRD）+1 → (OPRD)
+> * CMP OPRD1，OPRD2 ;(compare) ⽐较指令
+>   功能： （OPRD1）-（OPRD2）
+>
+> 其他就上图了嗷
+>
+> <img src="img/oi.png" alt="img" style="zoom:77%;" />
+>
+> ![img](img/lj.png)
+>
+> ![img](img/sc1.png)
+>
+> ![img](img/sc2.png)
 
