@@ -2810,3 +2810,135 @@ long CALLBACK WndProc(HWND hwnd, UINT message, UINT wParam, long lParam){
 
 *其他省电方式*
 
+## Deadlock
+
+**Definition**
+
+> A set of processes is deadlocked if each process in the set is waiting for an event that only another process **in the set** can cause
+
+**Key factor**
+
+* Race for Resource
+
+> 因为对资源的竞争才会产生死锁
+
+### Four Conditions
+
+Deadlock的4个必要条件(如果出现了Deadlock的话，那么)
+
+* Mutual exclusion condition
+
+  > Each resource is either currently assigned to exactly one process or is available.
+  >
+  > *问题：这句话是不是说了和没说一样，改成：有人正在访问关键区是不是更好呢？*
+
+* Hold and wait condition
+
+  > Process holding resources can request additional
+  >
+  > 某人不仅占着地方，还要别人的东西
+
+* No preemption condition
+
+  > Previously granted resources cannot forcibly taken away
+  >
+  > 占地方还要东西的人，还挺有礼貌，不抢
+
+* Circular wait condition
+
+  > * Must be a circular chain of 2 or more processes
+  > * Each is waiting for resource held by next member of the chain
+  >
+  > <img src="img/cir.png" alt="img" style="zoom:67%;" />
+
+解释一下必要条件：有Deadlock，一定同时有这4个；但是有这4个里的某些，不一定是Deadlock
+
+* 有互斥访问，但我也可以乖乖访问呀
+* 我虽然占着资源还要别人的资源，不过我要的那个别人可能不要
+* 连打劫的想法还没产生，对面直接交钱，不多bb
+* **拿上面那张图说明，c占着u，想要t；d占着t，想要u，照理来说，c和d都不允许对方先拿自己的东西，所以会产生死锁，但是有可能，t和u是个数组，而c只占有u的前几个，而d要访问u的后几个，这样就不会产生死锁了。也就是，如果每个资源是有多个的时候，就不一定**
+
+### Deadlock Handling
+
+#### Ostrich Algorithm
+
+不管，爱咋咋地。但是也有合理性，当今的UNIX和Windows就是这样，不管上层应用是否会产生死锁。因为管理成本太高太高了
+
+#### Detect and Recover
+
+**每种资源有一个**
+
+<img src="img/dd.png" alt="img" style="zoom:67%;" />
+
+> 使用离散数学中的环，如果有环，那这个程序就有可能会产生Deadlock
+
+**每种资源有多个**
+
+<img src="img/dd2.png" alt="img" style="zoom:67%;" />
+
+> 用个矩阵来检测
+>
+> * Em表示第m种资源有Em个
+> * Am表示程序运行了一段时间之后，第m种资源可用的还有Am个
+> * 左边那个c的矩阵的每一行是一个Process，Cnm表示第n个进程运行一段时间后占有的第m中资源有Cnm个
+> * Rnm表示第n个进程运行一段时间后还想要的第m种资源有Rnm个
+
+咋整捏？看个栗子就懂了
+
+<img src="img/lz.png" alt="img" style="zoom:67%;" />
+
+> 现在有3个进程，有四种资源，一共分别有4, 2, 3, 1个；在当前状态下，还能用的有2, 1, 0, 0个
+>
+> * 首先看需求，我还能用的能满足那些进程呢？
+>
+>   很显然，2100只能满足R的第三行2100，前两行因为有个1
+>
+>   所以第三行先运行，**运行完后就似了，要把财产交出来！**
+>
+> * 财产在哪儿？在C里！也就是第三行0120，那给它的2100再加上0120，就是第三行运行完似了后的可用向量：2220
+>
+> * 然后，2220能满足剩下的谁？第二行，所以让他来，第二行似了后，交出财产，可用向量变成4221
+>
+> * 然后4221能满足第一行，也能运行
+>
+> * 最后都能运行，没死锁！
+
+**Recover**
+
+出现Deadlock了，咋恢复呢？
+
+* Preemption
+
+  让对面还活着，但是把它的东西抢过来
+
+* Rollback
+
+  定期做快照，出死锁能回滚
+
+* Killing process
+
+  弄死，资源自然释放
+
+#### Avoidance
+
+**Resource trajectories**
+
+<img src="img/dilei.png" alt="img" style="zoom:67%;" />
+
+> 用的比较少，看有没有地雷，有就绕着走
+
+**Safe and Unsafe States**
+
+* Safe State: 有至少一种资源分配路径能使得这些程序不会产生死锁
+
+* Unsafe State: 不管我咋分配路径，都会产生死锁
+
+  > * Safe State不代表不产生死锁，只是有那么一丝希望
+  > * Unsafe State也不一定正处于死锁，只是有可能离死锁已经不远了；Safe也不一定正处于死锁，只是以后有可能遇到死锁，也有可能遇不到
+
+<img src="img/su.png" alt="img" style="zoom:67%;" />
+
+> 有五种状态，判断是Safe还是Unsafe。Free表示**ABC都想要**的，而且空闲的资源
+>
+> * a：我先分配给b，能执行完，b似了释放俩，现在有5个了；然后再分配给c，c正好执行完，之后释放2个，一共7个；然后分配给a，3 + 7 = 10 > 9，所以能执行完，Safe。也就是说，**存在一个资源分配方式：b, c, a使得不产生死锁，所以是Safe**
+> * b：很显然是Unsafe，因为咋分配都执行不完。**但是b当前的状态不是死锁状态，因为B还能向下挪一挪**
