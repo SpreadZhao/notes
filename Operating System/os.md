@@ -2942,3 +2942,98 @@ Deadlock的4个必要条件(如果出现了Deadlock的话，那么)
 >
 > * a：我先分配给b，能执行完，b似了释放俩，现在有5个了；然后再分配给c，c正好执行完，之后释放2个，一共7个；然后分配给a，3 + 7 = 10 > 9，所以能执行完，Safe。也就是说，**存在一个资源分配方式：b, c, a使得不产生死锁，所以是Safe**
 > * b：很显然是Unsafe，因为咋分配都执行不完。**但是b当前的状态不是死锁状态，因为B还能向下挪一挪**
+
+**The Banker's Algorithm**
+
+> What the algo-rithm does is check to see if <u>granting the request leads to an unsafe state</u>. If so, the request is denied. If granting the request leads to a safe state, it is carried out.
+
+<img src="img/bks.png" alt="img" style="zoom:67%;" />
+
+* a：随便走都能分完，一次分一个就行，safe
+* b：先给c，然后给b或者d，然后……也是safe
+* c：不管咋给都不行，unsafe
+
+<img src="img/bks2.png" alt="img" style="zoom:67%;" />
+
+* 现在有5个进程，4种资源，A表示还能用的资源，E表示总共有多少资源，P表示已经分配了多少资源
+* 左边矩阵是每个进程已经有了多少资源；右边是每个进程还要多少才完事儿
+* 那就看A(1020)能满足右边的谁，很显然只有D，那就先给他，让他完事儿释放资源，之后A变成了2121
+* 然后2121能满足A，也能满足E，但是看到E占有的资源很少，先不给他，给A(其实给E也行，不过做题只需要试出一个Safe就成功，所以先A)
+* 给A后，A变成了5132，然后再B，C，E。。。发现是Safe
+
+#### Prevention
+
+* Attacking the **Mutual Exclusion** Condition
+
+  > Key Idea: 不许竞争
+  >
+  > * Some devices (such as printer) can be spooled
+  >   * only the printer daemon uses printer resource
+  >   * thus deadlock for printer eliminated
+  >
+  > * Not all devices can be spooled
+  > * Principle:
+  >   * avoid assigning resource when not absolutely necessary
+  >   * as few processes as possible actually claim the resource
+
+* Attacking the **Hold and Wait** Condition
+
+  > Require processes to request resources before starting
+  >
+  > * a process never has to wait for what it needs
+  >
+  > Problems
+  >
+  > * may not know required resources at start of run
+  > * also ties up resources other processes could be using
+  >
+  > Variation:
+  >
+  > * process must give up all resources
+  > * then request all immediately needed
+
+  一次把所有资源拿到手，就不会Wait；一个资源也没有，就不会Hold
+
+* Attacking the **No Preemption Condition**
+
+  > This solution sometimes is not feasible.
+  >
+  > * Consider a process given the printer, but now it need a plotter that has already been given to others
+  >   * halfway through its job
+  >   * now forcibly take away printer
+  >   * !!??
+  >
+  > 打印机打到一半被抢了，那到底打谁的？可能会造成系统不一致
+
+* Attacking the Circular Wait Condition
+
+  > 最推荐的方式
+  >
+  > 假设有两个进程，一个进程做`p(1); p(2);`，另一个进程做`p(2); p(1);`那么如果第一个进程在`p(1)`的时候没问题，然后进到`p(2)`的时候把自己阻塞了，就代表"我已经占用了资源1，但我还等着你把资源2给我"；同理，另一个进程就是"我已经占用了资源2，但我还等着你把资源1给我"。这样就会导致Deadlock。如果让两个进程都是`p(1); p(2)`，那么就不会产生Deadlock，原因就是破坏了环路等待
+  >
+  > <img src="img/cw.png" alt="img" style="zoom:67%;" />
+  >
+  > provide a global numbering of all the resources, processes can request resources whenever they want to, but all requests must be made **in numerical order**.
+  >
+  > * Normally ordered resources
+  > * A resource graph
+
+#### Summary
+
+**要考的：**
+
+* 四个必要条件，概念填空
+
+* 解释为啥是必要条件
+
+* 给你一张表格：
+
+  | Condition        | Approach                              |
+  | ---------------- | ------------------------------------- |
+  | Mutual exclusion | Spool everything                      |
+  | Hold and wait    | Request all resources initially(最初) |
+  | No preemption    | Take resources away                   |
+  | Circular wait    | Order resources numerically           |
+
+  只给你右边，让你填左边
+
