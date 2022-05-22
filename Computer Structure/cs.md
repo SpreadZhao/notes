@@ -985,6 +985,18 @@ if(false){
 
 CPU访问内存是一定要经过Cache的，那么，既然syscall进行了调用 ，**那它操作的那块内存也一定进到了Cache中，既然进到了Cache中，那访问这个地方的速度一定要比其他地方快！**因此，我扫描一个巨大的数组，如果突然有个地方特别快，那这个东西就是我想要的
 
+另外，VMware中也提到了Side channel攻击技术：
+
+> **Symptoms**
+>
+> Virtual Machines that have side channel mitigations enabled while running on Fusion on Mac OS 11.0 or later or on Workstation on Windows hosts with virtualization based security enabled may run slowly.
+>
+> **Cause**
+>
+> <u>The root cause of the performance degradation is most likely due to mitigations for side channel attacks such as **`Spectre`** and **`Meltdown`**.</u> Side channel attacks allow unauthorized read access by malicious processes or virtual machines to the contents of protected kernel or host memory. CPU vendors have introduced a number of features to protect data against this class of attacks such as indirect branch prediction barriers, single thread indirect branch predictor mode, indirect branch restricted speculation mode and L1 data cache flushing. While these features are effective at preventing side channel attacks they can cause noticeable performance degradation in some cases.
+>
+> 
+
 
 
 ### 虚拟内存
