@@ -3037,3 +3037,5 @@ Deadlock的4个必要条件(如果出现了Deadlock的话，那么)
 
   只给你右边，让你填左边
 
+多处理器用busywaiting 特别设计
+
