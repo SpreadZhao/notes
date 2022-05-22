@@ -969,6 +969,8 @@ Separate the scheduling mechanism from the scheduling policy
 | Cost               | Big          | Small                           |
 | Other              | /            | 可实现应用特定Scheduler，效果好 |
 
+*问题：为啥实现在Kernel Space进行线程调度的开销大呢？不是应该取决于我这个线程放在用户空间还是内核空间吗？如果线程本来就是放在内核空间的，那么在内核空间调度内核空间的线程花费应该是更少的吧*
+
 ## Classical IPC Problems
 
 ### Dining Philosophers Problem
