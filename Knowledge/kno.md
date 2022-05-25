@@ -59,3 +59,23 @@
   ```
 
 * 然后正常commit+push即可删除，这里-A表示删除mode
+
+## 手动添加Git Bash Here到右键菜单
+
+* 打开`regedit`
+
+* 定位到`Computer\HKEY_CLASSES_ROOT\Directory\Background`
+
+* 如图添加键值对
+
+  <img src="img/gitbash.png" alt="img" style="zoom:67%;" />
+
+* ~~然后再添加图标和程序目录就好了~~
+
+  <img src="img/gitbash2.png" alt="img" style="zoom:67%;" />
+
+* 上面这么做是错的！`command`应该建在子项中，参考`cmd`是咋做的
+
+  <img src="img/gitbash3.png" alt="img" style="zoom:67%;" />
+
+  不过`icon`确实是加在那里
