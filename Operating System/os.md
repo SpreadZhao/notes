@@ -9,9 +9,16 @@
 ### Internal Structure
 
 * Code Segment(Read-Only)
+
 * Stack Segment
+
 * Data Segment
-* 分区：方便安全
+
+* Address Space
+
+* PCB
+
+  > 分区：方便安全
 
 ### Address Space: 进程之间互不相干
 
@@ -74,7 +81,7 @@
 
 #### Process Creation
 
-> **ps tree, 由 systemd(1号)生成其他进程**
+> **`pstree`命令，可以看到, 由 systemd(1号)生成其他进程**
 
 ##### Four time for creation
 
@@ -367,7 +374,7 @@ Result
 
      ><img src="img/thbdpb.png" alt="img" style="zoom:67%;" />
 
-### POSIX Thread
+### POSIX Thread-学会！
 
 * IEEE定义的线程包：pthread
 
@@ -462,7 +469,7 @@ Result
       * 反复查锁，浪费CPU时间
       * Cause Priority inversion problem
 
-  * 改进：发现别人上锁了，歇一会 -> Sleep and Wakeup
+  * 改进：发现别人上锁了，歇一会 -> **Sleep and Wakeup**
 
     * Implementation - with Producer Consumer
 
@@ -473,7 +480,7 @@ Result
       void producer(void){
           int item;
           while (TRUE) { 	/*repeat forever*/
-              item = produce item( ); 			/*generate next item*/
+              item = produce item(); 			/*generate next item*/
               if (count == N) sleep(); 			/*if buffer is full, go to sleep*/
               inser t item(item); 				/*put item in buffer*/
               count = count + 1; 					/*increment count of items in buffer*/
@@ -508,10 +515,10 @@ Result
       void producer(void){
           int item;
           while (TRUE) { 						/*TRUE is the constant 1*/
-              item = produce item( ); 		/*generate something to put in buffer*/
+              item = produce item(); 		/*generate something to put in buffer*/
               down(&empty); 					/*decrement empty count*/
               down(&mutex); 					/*enter critical region*/
-              inser t item(item); 			/*put new item in buffer*/
+              insert item(item); 			/*put new item in buffer*/
               up(&mutex); 					/*leave critical region*/
               up(&full); 						/*increment count of full slots*/
           }
