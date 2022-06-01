@@ -782,9 +782,9 @@ Result
           int item;
           message m; 							/*message buffer*/
           while (TRUE) {
-              item = produce item( );			 /*generate something to put in buffer*/
+              item = produce item();			 /*generate something to put in buffer*/
               receive(consumer, &m); 			 /*wait for an empty to arrive*/
-              build message(&m, item); 		 /*constr uct a message to send*/
+              build_message(&m, item); 		 /*construct a message to send*/
               send(consumer, &m);				 /*send item to consumer*/
           }
       }
@@ -795,9 +795,9 @@ Result
           for (i = 0; i < N; i++) send(producer, &m); 	  /*send N empties*/
           while (TRUE) {
               receive(producer, &m); 						/*get message containing item*/
-              item = extract item(&m); 					/*extract item from message*/
+              item = extract_item(&m); 					/*extract item from message*/
               send(producer, &m); 						/*send back empty reply*/
-              consume item(item); 						/*do something with the item*/
+              consume_item(item); 						/*do something with the item*/
           }
       }
       ```
@@ -3047,4 +3047,22 @@ Deadlock的4个必要条件(如果出现了Deadlock的话，那么)
   只给你右边，让你填左边
 
 多处理器用busywaiting 特别设计
+
+## Multiprocessor
+
+<img src="img/mp.png" alt="img" style="zoom:67%;" />
+
+> * a: shared memory motiprocessor
+>
+>   大家访问同一块内存
+>
+> * b: message-passing multicomputer
+>
+>   每个CPU有自己的内存，通过一个交叉网络传递信息
+>
+> * c: wide area distributed system
+>
+>   利用广域网实现
+
+经常考：给你图，问是哪个架构
 
