@@ -189,23 +189,23 @@
   > #include <unistd.h>
   > #include <stdio.h>
   > int main(){
-  >  pid_t pid;
-  >  pid = fork();
+  >      pid_t pid;
+  >      pid = fork();
   > 
-  >  if(pid == 0){
-  >      /*
-  >      	子进程会执行"ls -l"命令，不会打
-  >      	haha，因为execl就是子进程的尽头
-  >      */
-  >      execl("/bin/ls", "-l", 0);
-  >      printf("haha\n");
-  >  }
+  >      if(pid == 0){
+  >          /*
+  >            子进程会执行"ls -l"命令，不会打
+  >            haha，因为execl就是子进程的尽头
+  >          */
+  >          execl("/bin/ls", "-l", 0);
+  >          printf("haha\n");
+  >      }
   > 
-  >  /* 父进程pid > 0，不断打出hehe */
-  >  while(1){
-  >      sleep(1);
-  >      printf("hehe\n");
-  >  }
+  >      /* 父进程pid > 0，不断打出hehe */
+  >      while(1){
+  >          sleep(1);
+  >          printf("hehe\n");
+  >      }
   > }
   > ```
   >
@@ -2001,9 +2001,13 @@ Directory operating interface
 | Opendir  | Link    |
 | Closedir | Unlink  |
 
-Question
+Question问题：
 
 * 为啥读一个文件还要open一下，直接read不行吗？
+
+  > `open`就是`malloc`；`close`就是`free`
+  >
+  > 获得的文件句柄指针所指向的区域是放在堆区的，因为放在栈区`open`结束后就会被销毁；放在静态区多次`open`打开的是同一个文件，而放在堆区在创建的时候就要用`malloc`，正好和`close`中的`free`；配套
 
 * 为啥要有一个Rename，对文件进行修改本身就是要进行写操作，那用Write不就行了吗？
 
