@@ -1796,6 +1796,8 @@ Most important: exe and archive
 >
 > * 'd' 代表目录文件
 > * '-' 代表普通文件
+>
+> 问题：
 
 Device file下的block device file和character device file
 
@@ -2084,6 +2086,23 @@ How do we implement file?
 
 ##### Inode
 
+> Inodes contain the following information:
+>
+> - **File type** - file, folder, executable program etc.
+> - **File size**
+> - **Time stamp** - creation, access, modification times
+> - **File permissions** - read, write, execute
+> - **[Access control list](https://techterms.com/definition/acl)** - permissions for special users/groups
+> - **File protection flags**
+> - **File location** - directory path where the file is stored
+> - **Link count** - number of hardlinks to the inode
+> - **Additional file [metadata](https://techterms.com/definition/metadata)**
+> - **File pointers** - addresses of the storage blocks that store the file contents
+>
+> Notably, an inode does not contain the [filename](https://techterms.com/definition/filename) or the actual [data](https://techterms.com/definition/data). When a file is created in the Linux file system, it is assigned an inode number and a filename. This linked pair allows the filename to be changed without affecting the file ID in the system. The same holds true when renaming directories, which are treated as files in Linux.
+>
+> File data is stored across one or more blocks on the storage device. An inode includes a pointer to this data but does not contain the actual data. Therefore, all inodes are relatively small, regardless of the size of the files they identify.
+
 * **一个文件对应一个Inode**，对比前面的FAT，要访问那个文件，加载哪个文件的Inode即可，不向上面那样导入整张表
 * 一个文件坏了，不会影响到其他文件，可靠性提高
 
@@ -2158,6 +2177,12 @@ How do we implement file?
 
 <img src="img/hli.png" alt="img" style="zoom:67%;" />
 
+> 问题：
+>
+> <img src="img/link.png" alt="img" style="zoom:67%;" />
+>
+> **可不可以这么想：软连接的话，如果改了源文件的名字，软连接就会失效。那是不是意味着，软连接其实就是一个新文件，在里面通过源文件的名字来打开这个文件，如果打开失败，返回的错误码和`open`系统调用返回的错误码是一样的。**
+
 *一个实验：如果把s.c删掉，sln.c会进入悬空状态；如果把s.c删掉，hln.c的文件内容还在，这是为什么？*
 
 > * 硬链接是通过目录指向同一个Inode实现的，把一个目录删掉，另一个还在。那什么时候Inode被释放呢？那个Count看见了吗，当Count变成0的时候就释放了
@@ -2170,6 +2195,32 @@ How do we implement file?
 *既然软连接这么好使，还要硬链接干嘛？*
 
 > 上面都说了，软连接是俩不同的文件，**创建软连接是要消耗Inode的！**Inode的个数在一些系统上是有限的，所以软连接过多，有时候磁盘空间够，但是文件创建不出来了
+
+**Directory Implementation**
+
+> The internal structure of directories is dependent on the filesystem in use. If you want to know precisely what happens, have a look at filesystem implementations.
+>
+> Basically, in most filesystems, a directory is an [associative array](http://en.wikipedia.org/wiki/Associative_array) between filenames (keys) and inodes numbers (values). Something like this¹:
+>
+> ```
+> 1167010 .
+> 1158721 ..
+> 1167626 subdir
+>  132651 barfile
+>  132650 bazfile
+> ```
+>
+> This list is coded in some – more or less – efficient way inside a chain of (usually) 4KB blocks. Notice that the content of regular files is stored similarly. In the case of directories, there is no point in knowing which size is actually used inside these blocks. That's why the sizes of directories reported by `du` are multiples of 4KB.
+>
+> Inodes are there to tie blocks together, forming a single entity, namely a 'file' in the general sense. They are identified by a number which is some kind of address and each one is usually stored as a single, special block.
+>
+> Management of all this happens in kernel mode. Software just asks for the creation of a directory with a function named `int mkdir(const char *pathname, mode_t mode);` leading to a system call, and all the rest is performed behind the scenes.
+>
+> **About links structure:**
+>
+> A hard link is not a file, it's just a new directory entry (i.e. a *name – inode number* association) referring to a preexisting inode entity². This means that the same inode can be accessed from different pathnames. In particular, since metadatas (permissions, ownership, timestamps…) are stored within the inode, these are unique and independent of the pathname chosen to access the file.
+>
+> A symbolic link *is* a file and it's distinct from its target. This means that it has its own inode. It used to be handled just like a regular file: the target path was stored in a data block. But now, for efficiency reasons in recent *ext* filesystems, paths shorter than 60 bytes long are stored within the inode itself (using the fields which would normally be used to store the pointers to data blocks).
 
 #### File System Layout
 
