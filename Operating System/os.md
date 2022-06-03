@@ -108,29 +108,29 @@
   > Code
   >
   > ```c
-  >   #include <unistd.h>
-  >   #include <stdio.h>
-  >   int main(){
-  >       pid_t pid;
-  >       /* 子进程拿到的pid是0 */
-  >       pid = fork();
-  >       /* 父进程拿到的pid是子进程的，>0 */
-  >       
-  >       //子进程会走这里
-  >       if(pid == 0){
-  >           while(1){
-  >               sleep(1);
-  >               printf("Kylin\n");
-  >           }
-  >       }
-  >       //父进程会走这里
-  >       if(pid > 0){
-  >           while(1){
-  >               sleep(1);
-  >               printf("My Favorite\n");
-  >           }
-  >       }
-  >   }
+  > #include <unistd.h>
+  > #include <stdio.h>
+  > int main(){
+  >    pid_t pid;
+  >    /* 子进程拿到的pid是0 */
+  >    pid = fork();
+  >    /* 父进程拿到的pid是子进程的，>0 */
+  > 
+  >    //子进程会走这里
+  >    if(pid == 0){
+  >        while(1){
+  >            sleep(1);
+  >            printf("Kylin\n");
+  >        }
+  >    }
+  >    //父进程会走这里
+  >    if(pid > 0){
+  >        while(1){
+  >            sleep(1);
+  >            printf("My Favorite\n");
+  >        }
+  >    }
+  > }
   > ```
   >
   > Result
@@ -139,7 +139,7 @@
   >
   > **注意：子进程从fork返回处开始执行**
   >
-  > *可能的疑问：子进程的PID是0是不是因为从返回处开始执行，导致没有初始化呢？*
+  > *问题：子进程的PID是0是不是因为从返回处开始执行，导致没有初始化呢？*
   >
   > Another example
   >
@@ -147,21 +147,37 @@
   > #include <unistd.h>
   > #include <stdio.h>
   > int main(){
-  >    	pid_t pid;
-  >    	pid = fork();
-  >     
-  >        if(pid == 0){
-  >            sleep(1);
-  >            printf("Kylin\n");
-  >        }
-  >     
-  >        sleep(1);
-  >        printf("My Favorite\n");
+  > 	pid_t pid;
+  > 	pid = fork();
+  > 
+  >     if(pid == 0){
+  >         sleep(1);
+  >         printf("Kylin\n");
+  >     }
+  > 
+  >     sleep(1);
+  >     printf("My Favorite\n");
   > }
   > ```
   >
   > * Question: 该程序会打印几次Kylin，几次My Favorite？
   > * Ans: 1, 2(父进程不会走==0，只会打My Favorite，子进程即打Kylin，也打My Favorite)
+  >
+  > Another Question
+  >
+  > 对于下面的程序，程序执行完成后，会产生几个进程？
+  >
+  > ```c
+  > int main(){
+  >     pid_t pid;
+  >     int i;
+  >     for(i = 0; i < 2; i++){
+  >         pid = fork();
+  >     }
+  > }
+  > ```
+  >
+  > 首先看父进程。假设它是1号，从0开始，到2，会执行两次`fork`，产生两个子进程2号和3号；2号是在`i = 0`的时候创建的，那么2号会**从`fork`的返回处开始执行**，也就是一上来就执行`i++`，i变成1，那么2号就只会执行一次`fork`，产生一个4号；对于3号，它是在1号的`i = 1`的时候开始创建的，并且也是从返回处开始执行，那么3号先`i++`变成2，发现不满足条件，则3号一次`fork`也不会执行；4号进程的i和3号一样是1，那么人生经历和3号一样也不会执行`fork`。那么1, 2, 3, 4一共4个进程会被产生
 
 * Execl
 
@@ -173,25 +189,27 @@
   > #include <unistd.h>
   > #include <stdio.h>
   > int main(){
-  >     pid_t pid;
-  >     pid = fork();
-  >     
-  >     if(pid == 0){
-  >         /*
-  >         	子进程会执行"ls -l"命令，不会打
-  >         	haha，因为execl就是子进程的尽头
-  >         */
-  >         execl("/bin/ls", "-l", 0);
-  >         printf("haha\n");
-  >     }
-  >     
-  >     /* 父进程pid > 0，不断打出hehe */
-  >     while(1){
-  >         sleep(1);
-  >         printf("hehe\n");
-  >     }
+  >  pid_t pid;
+  >  pid = fork();
+  > 
+  >  if(pid == 0){
+  >      /*
+  >      	子进程会执行"ls -l"命令，不会打
+  >      	haha，因为execl就是子进程的尽头
+  >      */
+  >      execl("/bin/ls", "-l", 0);
+  >      printf("haha\n");
+  >  }
+  > 
+  >  /* 父进程pid > 0，不断打出hehe */
+  >  while(1){
+  >      sleep(1);
+  >      printf("hehe\n");
+  >  }
   > }
   > ```
+  >
+  > 问题：
   >
   > Result
   >
