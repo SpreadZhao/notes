@@ -141,7 +141,7 @@
   >
   > *问题：子进程的PID是0是不是因为从返回处开始执行，导致没有初始化呢？*
   >
-  > Another example
+  > Another example 
   >
   > ```c
   > #include <unistd.h>
@@ -594,17 +594,19 @@ Result
     | Pthread_mutex_trylock | Acquire a lock or **fail**  |
     | Pthread_mutex_unlock  | Release a lock              |
 
+    *问题：linuxStudy/mutex.c为什么两个in？*
+
     Example
 
     ![img](img/mutexex.png)
 
   * Mutex, Semaphore区别
-
-    * 量级
+  
+  * 量级
     * **Mutex进程完了就没了，除非塞到Share Memory**
 
   * Mutex Implementation in ASM
-
+  
     ```assembly
     mutex lock:
         TSL REGISTER,MUTEX 				 ; copy mutex to register and set mutex to 1
@@ -615,7 +617,7 @@ Result
     ok: RET 							; return to caller; critical region entered
     mutex unlock:
         MOVE MUTEX,#0 					 ; store a 0 in mutex
-        RET 							; return to caller
+      RET 							; return to caller
     ```
 
   * Mutex Other: Conditional Variables
@@ -625,7 +627,7 @@ Result
     ![img](img/cdvb2.png)
 
   * Monitor
-
+  
     >**Semaphore problem: easy to <u>deadlock</u>**
     >
     >What is Dead lock?
@@ -633,7 +635,7 @@ Result
     >![img](img/ddlk.png)
     >
     >结论：
-    >
+  >
     >​	**使用Semaphore要小心**
 
     Solution: High level abstraction
@@ -645,7 +647,7 @@ Result
     > Only one process can be active *in a monitor* at any instant.
 
     Example - Pascal语言
-
+  
     ```pascal
     monitor example
     	integer i;
@@ -660,11 +662,11 @@ Result
     	procedure consumer();
     	.
     	end;
-    end monitor;
+  end monitor;
     ```
 
     Monitor - Pseudo Pascal
-
+  
     ```pascal
     monitor ProducerConsumer
         condition full, empty;
@@ -705,11 +707,11 @@ Result
             item = ProducerConsumer.remove;
             consume item(item)
     	end
-    end;
+  end;
     ```
 
     Monitor - Java(synchronized)
-
+  
     ```java
     public class ProducerConsumer {
         static final int N = 100; 						// constant giving the buffer size
@@ -767,32 +769,32 @@ Result
             private void go_to_sleep() { 
                 try{wait();} catch(InterruptedException exc) {};}
             }
-    }
+  }
     ```
 
   * Message Passing
 
     Monitor Disadvantage
-
+  
     >Monitor之间也需要互斥，因为管程也是一个编程语言概念，**编译器必须要识别管程并用某种方式对其互斥进行安排**。但实际中，**如何让编译器知道哪些过程属于管程，哪些不属于？**
     >
     >如果一个分布式系统具有多个CPU，并且每个CPU拥有自己的私有内存，他们通过一个局域网相连，那么，这些原语将失效。这里的结论是：Semaphore太低级了，而管程在少数几种编程语言之外又无法使用，并且，这些原语均未提供机器间的信息交换方法，所以还需要其他的方法——Message Passing
-    >
+  >
     >即，Monitor，Semaphore, Mutex解决的也都是一台电脑内部的Process, Thread互斥，没解决多台电脑合作时的互斥
 
     Message Passing System Call
 
     * 像Semaphore而不像Monitor，是系统调用而不是语言成分
-
+  
       > Message Passing使用两条原语来实现**进程**间通信
       >
       > ```c
       > send(destination, &message);
-      > receive(source, &message);
+    > receive(source, &message);
       > ```
 
     * Example
-
+  
       ```c
       #define N 100							/*number of slots in the buffer*/
       void producer(void)
@@ -817,13 +819,13 @@ Result
               send(producer, &m); 						/*send back empty reply*/
               consume_item(item); 						/*do something with the item*/
           }
-      }
+    }
       ```
 
   * Barriers
 
     用于一组Process同步
-
+  
     <img src="img/barrier.png" alt="img" style="zoom:67%;" />
 
 ## Scheduling
