@@ -368,28 +368,33 @@ Result
      >优点
      >
      >* 可在不支持Thread的OS上实现
+     >
      >* 线程切换快，不用陷入内核
+     >
+     >  *问题：线程切换不需要靠系统调用来实现吗？如果要靠系统调用的话，不是还需要陷入到内核空间中吗？*
+     >
      >* 允许每个Thread有自己的Scheduling Algorithm
+     >
      >* 有较好的可扩展性
      >
      >问题：如何实现系统调用
      >
      ><img src="img/howsyscall.png" alt="img" style="zoom:67%;" />
-
+  
   2. In Kernel Space
-
+  
      <img src="img/tinks.png" alt="img" style="zoom:67%;" />
-
+  
      >* 创建Thread要用系统调用，进入Kernel Space
      >
      >* Process Table保存每个Process的状态等
      >
      ><img src="img/tinkspb.png" alt="img" style="zoom:67%;" />
-
+  
   3. Hybrid
-
+  
      <img src="img/thybrid.png" alt="img" style="zoom:50%;" />
-
+  
      ><img src="img/thbdpb.png" alt="img" style="zoom:67%;" />
 
 ### POSIX Thread-学会！
@@ -791,8 +796,9 @@ Result
       > ```c
       > send(destination, &message);
     > receive(source, &message);
-      > ```
-
+    >
+    > ```
+  
     * Example
   
       ```c
@@ -819,11 +825,11 @@ Result
               send(producer, &m); 						/*send back empty reply*/
               consume_item(item); 						/*do something with the item*/
           }
-    }
+      }
       ```
-
+  
   * Barriers
-
+  
     用于一组Process同步
   
     <img src="img/barrier.png" alt="img" style="zoom:67%;" />
@@ -1799,7 +1805,7 @@ Most important: exe and archive
 > * 'd' 代表目录文件
 > * '-' 代表普通文件
 >
-> 问题：
+> 问题：这里显示的目录文件为啥是文件夹？
 
 Device file下的block device file和character device file
 
@@ -2034,7 +2040,9 @@ Question问题：
 
 现在有一个s.c文件，给它建一个link，使用如下代码
 
-> `ln -s s.c sln.c`
+```c
+ln -s s.c sln.c
+```
 
 这样就建好了一个类似快捷方式的东西，sln.c就是s.c的快捷方式
 
@@ -2198,8 +2206,10 @@ How do we implement file?
 
 > 上面都说了，软连接是俩不同的文件，**创建软连接是要消耗Inode的！**Inode的个数在一些系统上是有限的，所以软连接过多，有时候磁盘空间够，但是文件创建不出来了
 
-**Directory Implementation**
+**Quote on Stack Overflow**
 
+> **Directory Implementation**
+>
 > The internal structure of directories is dependent on the filesystem in use. If you want to know precisely what happens, have a look at filesystem implementations.
 >
 > Basically, in most filesystems, a directory is an [associative array](http://en.wikipedia.org/wiki/Associative_array) between filenames (keys) and inodes numbers (values). Something like this¹:
@@ -2208,8 +2218,8 @@ How do we implement file?
 > 1167010 .
 > 1158721 ..
 > 1167626 subdir
->  132651 barfile
->  132650 bazfile
+> 132651 barfile
+> 132650 bazfile
 > ```
 >
 > This list is coded in some – more or less – efficient way inside a chain of (usually) 4KB blocks. Notice that the content of regular files is stored similarly. In the case of directories, there is no point in knowing which size is actually used inside these blocks. That's why the sizes of directories reported by `du` are multiples of 4KB.
