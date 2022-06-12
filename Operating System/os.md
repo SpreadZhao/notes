@@ -139,7 +139,7 @@
   >
   > **注意：子进程从fork返回处开始执行**
   >
-  > *问题：子进程的PID是0是不是因为从返回处开始执行，导致没有初始化呢？*
+  > *问题：子进程的PID是0是不是因为从返回处开始执行，导致没有初始化呢？*（普通中断/缺页中断）
   >
   > Another example 
   >
@@ -377,7 +377,7 @@ Result
      >
      >* 有较好的可扩展性
      >
-     >问题：如何实现系统调用
+     >问题：如何实现阻塞系统调用
      >
      ><img src="img/howsyscall.png" alt="img" style="zoom:67%;" />
   
@@ -795,9 +795,11 @@ Result
       >
       > ```c
       > send(destination, &message);
-    > receive(source, &message);
-    >
+  
+  
+  
     > ```
+    > receive(source, &message);
   
     * Example
   
@@ -1670,7 +1672,7 @@ CISC与RISC的区别
 
 <img src="img/ciscpb.png" alt="img" style="zoom:60%;" />
 
-假设MOVE和6在一个Page，2在下一个Page。当发现2是Abscent，就会产生一个**Page Fault**，**返回地址是2的地址。**这样就会先把MOV 6存在CPU的某个位置，等2进来后再拼一起，放到Instruction流水线上执行
+假设MOVE和6在一个Page，2在下一个Page。当发现2是Abscent，就会产生一个**Page Fault**，**返回地址是2的地址（产生缺页中断处）。**这样就会先把MOV 6存在CPU的某个位置，等2进来后再拼一起，放到Instruction流水线上执行
 
 **但是普通中断不这样**
 
