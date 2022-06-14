@@ -67,7 +67,7 @@
 
 <img src="img/intelcpu.png" alt="img" style="zoom:50%;" />
 
-由于是从低地址拷贝到高地址，因此拷贝的16byte会将low覆盖。
+由于是从低地址拷贝到高地址，因此拷贝的16byte会将low覆盖。**同时我们也能看出，Stack Segment存放的是局部变量和函数的返回地址**
 
 ### Process Model
 
@@ -608,8 +608,9 @@ Result
   * Mutex, Semaphore区别
   
   * 量级
-    * **Mutex进程完了就没了，除非塞到Share Memory**
-
+    
+* **Mutex进程完了就没了，除非塞到Share Memory**
+    
   * Mutex Implementation in ASM
   
     ```assembly
@@ -623,14 +624,14 @@ Result
     mutex unlock:
         MOVE MUTEX,#0 					 ; store a 0 in mutex
       RET 							; return to caller
-    ```
-
-  * Mutex Other: Conditional Variables
-
-    ![img](img/cdvb.png)
-
-    ![img](img/cdvb2.png)
-
+  ```
+  
+* Mutex Other: Conditional Variables
+  
+  ![img](img/cdvb.png)
+  
+  ![img](img/cdvb2.png)
+  
   * Monitor
   
     >**Semaphore problem: easy to <u>deadlock</u>**
@@ -641,16 +642,16 @@ Result
     >
     >结论：
   >
-    >​	**使用Semaphore要小心**
-
-    Solution: High level abstraction
-
-    >A monitor is **a collection of procedures, variables, and data structures** that are all **grouped together** in a special kind of module or package. Processes may call the procedures in a monitor whenever they want to, but they **can't directly access the monitor's internal data structures** from procedures declared outside the monitor.
-
-    **Monitor Important Feature**
-
-    > Only one process can be active *in a monitor* at any instant.
-
+  >​	**使用Semaphore要小心**
+  
+  Solution: High level abstraction
+  
+  >A monitor is **a collection of procedures, variables, and data structures** that are all **grouped together** in a special kind of module or package. Processes may call the procedures in a monitor whenever they want to, but they **can't directly access the monitor's internal data structures** from procedures declared outside the monitor.
+  
+  **Monitor Important Feature**
+  
+  > Only one process can be active *in a monitor* at any instant.
+  
     Example - Pascal语言
   
     ```pascal
@@ -668,8 +669,8 @@ Result
     	.
     	end;
   end monitor;
-    ```
-
+  ```
+  
     Monitor - Pseudo Pascal
   
     ```pascal
@@ -713,8 +714,8 @@ Result
             consume item(item)
     	end
   end;
-    ```
-
+  ```
+  
     Monitor - Java(synchronized)
   
     ```java
@@ -775,28 +776,31 @@ Result
                 try{wait();} catch(InterruptedException exc) {};}
             }
   }
-    ```
-
-  * Message Passing
-
+  ```
+  
+* Message Passing
+  
     Monitor Disadvantage
   
     >Monitor之间也需要互斥，因为管程也是一个编程语言概念，**编译器必须要识别管程并用某种方式对其互斥进行安排**。但实际中，**如何让编译器知道哪些过程属于管程，哪些不属于？**
     >
     >如果一个分布式系统具有多个CPU，并且每个CPU拥有自己的私有内存，他们通过一个局域网相连，那么，这些原语将失效。这里的结论是：Semaphore太低级了，而管程在少数几种编程语言之外又无法使用，并且，这些原语均未提供机器间的信息交换方法，所以还需要其他的方法——Message Passing
   >
-    >即，Monitor，Semaphore, Mutex解决的也都是一台电脑内部的Process, Thread互斥，没解决多台电脑合作时的互斥
-
-    Message Passing System Call
-
+  >即，Monitor，Semaphore, Mutex解决的也都是一台电脑内部的Process, Thread互斥，没解决多台电脑合作时的互斥
+  
+  Message Passing System Call
+  
     * 像Semaphore而不像Monitor，是系统调用而不是语言成分
   
       > Message Passing使用两条原语来实现**进程**间通信
       >
       > ```c
       > send(destination, &message);
+      > ```
     > receive(source, &message);
     >
+    > ```
+    > 
     > ```
   
     * Example
