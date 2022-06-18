@@ -79,3 +79,16 @@
   <img src="img/gitbash3.png" alt="img" style="zoom:67%;" />
 
   不过`icon`确实是加在那里
+
+## 不clone仓库而添加远程仓库
+
+* `git init`在当前目录下生成`.git`文件夹
+
+* 在那边建好仓库，复制地址
+
+* `git remote add origin <地址>`
+
+  origin就是仓库的名字，可以随便起，只是给本地一个提示罢了，origin是clone下来默认的名字
+
+* 如果改地址，那就`git remote set-url <仓库名> <新地址>`
+
