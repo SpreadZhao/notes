@@ -40,4 +40,28 @@
   
 * Finite-state machine?
 
-* 
+
+# IPC
+
+* Race Condition
+
+  > Situations like this, where two or more processes are reading or writing some shared data and the final result depends on who runs precisely when, are called **race conditions**.
+
+* Critical Region
+
+  > That part of the program where the shared memory is accessed is called the critical region or critical section.
+
+# Memory Management
+
+* Overlay - Replaced by Virtual Memory
+
+  > A solution adopted in the 1960s was to <u>split programs into little pieces, called **overlays**</u>.
+
+* MMU
+
+  > When virtual memory is used, the virtual addresses do not go directly to the memory bus. Instead, they go to an **MMU** (Memory Management Unit) that <u>maps the virtual addresses onto the physical memory addresses</u>. **It is in CPU!!!**
+
+* TLB
+
+  > The solution that has been devised is to equip computers with a small hardware device for <u>mapping virtual addresses to physical addresses without going through the page table</u>. The device, called a **TLB** (Translation Lookaside Buffer) or sometimes an associative memory.
+

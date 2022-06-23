@@ -608,9 +608,9 @@ Result
   * Mutex, Semaphore区别
   
   * 量级
-    
+  
 * **Mutex进程完了就没了，除非塞到Share Memory**
-    
+  
   * Mutex Implementation in ASM
   
     ```assembly
@@ -624,6 +624,9 @@ Result
     mutex unlock:
         MOVE MUTEX,#0 					 ; store a 0 in mutex
       RET 							; return to caller
+    ```
+  ```
+  
   ```
   
 * Mutex Other: Conditional Variables
@@ -669,7 +672,7 @@ Result
     	.
     	end;
   end monitor;
-  ```
+    ```
   
     Monitor - Pseudo Pascal
   
@@ -714,7 +717,7 @@ Result
             consume item(item)
     	end
   end;
-  ```
+    ```
   
     Monitor - Java(synchronized)
   
@@ -776,7 +779,7 @@ Result
                 try{wait();} catch(InterruptedException exc) {};}
             }
   }
-  ```
+    ```
   
 * Message Passing
   
@@ -809,10 +812,11 @@ Result
   
     > ```
     > receive(source, &message);
+    > ```
 >>>>>>> fedd9a90e1940e19af66713c598e24ed60a3434c
-  
+
     * Example
-  
+      
       ```c
       #define N 100							/*number of slots in the buffer*/
       void producer(void)
@@ -839,7 +843,7 @@ Result
           }
       }
       ```
-  
+
   * Barriers
   
     用于一组Process同步
@@ -3163,3 +3167,28 @@ Deadlock的4个必要条件(如果出现了Deadlock的话，那么)
 
 经常考：给你图，问是哪个架构
 
+**UMA**(Uniform Memory Access): 访问内存的速度一样(**a**)
+
+**NUMA**: 不一样(b, c)
+
+## Security
+
+| Goal                         | Threat                    |
+| ---------------------------- | ------------------------- |
+| Data confidentiality(机密性) | Exposure of data          |
+| Data integrity(完整性)       | Tampering(篡改) with data |
+| System availability(可用性)  | Denial(拒绝) of service   |
+
+**Covert Channel**(隐蔽信道)
+
+**Symmetric key(对称秘钥)**: 加密和解密的秘钥是一样的
+
+**Public key(公钥)**：加密和解密秘钥不一样
+
+**Protection Domain**: 哪些进程能对哪些文件访问的表，一个进程的势力范围
+
+**Access Control List(ACL)**：Protection Domain的一列是一个ACL，也就是一个文件对应一个ACL
+
+**Discretionary access control(DAC)**: 自主访问控制，用户可以自己决定谁能访问
+
+**Mandatory access control(MAC)**: 强制访问控制，系统生成的命令
