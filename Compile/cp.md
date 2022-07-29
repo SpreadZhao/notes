@@ -99,7 +99,7 @@ P = {<句子> $\rightarrow$ <名词短语><动词短语>, <名词短语> $\right
 
 开始符号：文法中最大的语法成分：比如上面的例子，最大的语法成分就是**S = <句子>**
 
-### 2.5 文法
+### 2.5 Grammar
 
 就是上面四项组成的集合：
 
@@ -135,7 +135,7 @@ G = (V~T~, V~N~, P, S)
 * $\alpha$ $\in$ (V~T~ $\cup$ V~N~)^+^，并且$\alpha$中至少得有一个V~N~的元素，称为产生式的**头部**或者**左部**
 * $\beta$ $\in$ (V~T~ $\cup$ V~N~)^+^，称为产生式的**体**或者**右部**
 
-### 2.6 符号约定
+### 2.6 Symbolic Convention
 
 上面说了那么多Terminal和Nonterminal，怎么区分他们呢？
 
@@ -161,7 +161,7 @@ G = (V~T~, V~N~, P, S)
 * 小写希腊字母，比如$\alpha$, $\beta$, $\gamma$，表示**文法符号串**(包括空串)
 * **除非有特别说明，第一个产生式的左部就是开始符号**
 
-### 2.7 语言
+### 2.7 Language
 
 *给你一个句子：`little boy eats apple`，咋判断它符不符合语法？*
 
@@ -286,7 +286,7 @@ L(G) = {$\omega$ | S $\Rightarrow$^*^ $\omega$, $\omega$ $\in$ V~T~^*^} (*问题
 >
 > 语言也和串一样可以连接，**语言也是句子的集合**，因此**本题中默认A, B等都是句子**，D也是语言，0, ..., 9也都是句子。而L(L $\cup$ D)^*^表示一个字母开头，后面连接上L并上D的克林闭包，那么就是说是由字母和数字组成的一堆东西，然后还是字母开头，那表示的也是**标识符**
 
-### 2.8 文法分类
+### 2.8 Grammatical Classification
 
 #### 2.8.1 Type-0 Grammar: Unrestricted Grammar
 
@@ -344,11 +344,11 @@ Production的一般形式：$\alpha_1A\alpha_2\rightarrow\alpha_1\beta\alpha_2(\
 >
 > 然后它生成的是什么语言呢？首先看T是啥：T要么是单纯的a ~ d, 0 ~ 5，要么是这些后面再套娃上T，所以T就是一个任意长度的字母和数字组成的串；然后再看S：S要么是单纯的abcd，要么是abcd打头，后面跟上个T，所以这个生成的还是**标识符**，只不过它只能由0 ~ 5和a ~ d构成
 
-### 2.9 文法关系
+### 2.9 Grammatical Relationships
 
 **0型**包含**1型**包含**2型**包含**3型**
 
-### 2.10 CFG分析树
+### 2.10 CFG Tree
 
 首先CFG：就是一堆$A \rightarrow \beta$
 
@@ -899,6 +899,266 @@ ABC接收2之后会进入C，C是终态
 然后状态36接收到d还会变成自己；36遇到E会变成45；45遇到+-会变成5；45遇到d会变成6；5遇到d会变成6；6遇到d会变成6
 
 ![img](img/w10.png)
+
+## 4. 语法分析
+
+### 4.1 Top-Down Parsing
+
+来看一个例子，也是之前表达式的例子
+
+1. E -> E + E
+2. E -> E * E
+3. E -> (E)
+4. E -> id
+
+根据这个文法，我们能**自顶向下**构造出语法的分析树：
+
+![img](img/td1.png)
+
+显然，这个分析树不是唯一的，只是我们**随便**根据选的规则画出来的，下面来写一下这棵树对应的derive过程：
+
+> $E \Rightarrow E + E$				将根节点E由规则1替换成E+E
+>
+> ​	$\Rightarrow E + (E)$			 将加号右边的E根据规则3替换成(E)
+>
+> ​	$\Rightarrow E + (E + E)$	 将括号里面的E根据规则1替换成E+E
+>
+> ​	$\Rightarrow E + (id + E)$	 将括号里面左边的E根据规则4替换成id
+>
+> ​	$\Rightarrow id + (id + E)$	 将最左边的E根据规则4替换成id
+>
+> ​	$\Rightarrow id + (id + id)$	 将最后一个E替换成id
+
+我们能发现，**最后一个是句子，所有的符号都是Terminal。而且在这个句子中，所有的符号正好都是分析树的叶节点**
+
+那么回顾我们推导的过程，在每步推导中，都要考虑两个事情：
+
+* 我们要替换的**Nonterminal是谁**？这里其实替换的全是E，只不过是哪一个E不确定
+* 我们要根据**什么规则**来进行替换？也就是这4个中的哪一个？
+
+#### 4.1.1 Left-most Derivation
+
+首先来回答上面的第一个问题。我们可以每次都选择**最左边**的来进行替换，只不过要是**Nonterminal**才行，否则也替换不了
+
+![img](img/td2.png)
+
+就向上图一样，每次都替换最左边的E，因为只有E才是Nonterminal。然后这整个推导的过程叫做**最左推导**，而如果反着来，显然就是**从右边开始**去合成大西瓜，就是**最右规约**
+
+同时，推导出来的这个句型就叫做该文法的**最左句型**(left-sentential form)。要注意是句型不是句子，也就是这个过程中每一步都是最左句型；并且一定是要由**Start Symbol**开始推导
+
+#### 4.1.2 Right-most Derivation
+
+同理可得
+
+![img](img/td3.png)
+
+而在**自底向上**(**不是Top-Down!!!**)的分析过程中，我们总是采用最左规约的方式，因此把最左规约称为**规范规约**；相应的最右推导称为**规范推导**
+
+**唯一性**
+
+对于一个文法，它的最左推导和最右推导都是**唯一的**，因为推导的过程中要替换的那个一定是唯一的
+
+**Top-Down一般采用Left-most Derivation**
+
+下面来看一个例子，比如文法G：
+
+1. E -> TE'
+2. E' -> +TE' | $\epsilon$
+3. T -> FT'
+4. T' -> *FT' | $\epsilon$
+5. F -> (E) | id
+
+如果输入的串是`id + id * id`，那么会有：
+
+首先，**输入指针**指向输入串的第一个字符，也就是id
+
+![img](img/ld1.png)
+
+然后从Start Symbol开始，也就是E，E只能按规则1替换
+
+![img](img/ld2.png)
+
+然后这时还没有id，所以要接着替换。从**最左边**开始，把T按着规则3替换
+
+![img](img/ld3.png)
+
+继续， 把F按着规则5替换。这时问题来了：F既可以替换成(E)也可以替换成id。那么替换哪个呢？我们**输入指针**指向的是id，那自然要就近来。所以要把F替换成id，自然也就匹配了
+
+![img](img/ld4.png)
+
+然后，**输入指针**自然也要往后移一位了
+
+![img](img/ld5.png)
+
+此时最左边的Nonterminal是T'，自然要替换它了。它能替换成*FT'或者$\epsilon$，而现在是个加号。很显然，T'不可能以\*开头，那么我们只能将T'替换成$\epsilon$了
+
+![img](img/ld6.png)
+
+此时最左边的是E'，它能替换成+TE'或者$\epsilon$，显然以加号开头的这个正是我们想要的，那么就这么替换
+
+![img](img/ld7.png)
+
+然后输入指针后移一位
+
+![img](img/ld8.png)
+
+然后开始替换T，只能替换成FT'
+
+![img](img/ld9.png)
+
+然后自然是把F替换成id了，并且后移一位输入指针
+
+![img](img/ld10.png)|![img](img/ld11.png)
+
+替换T'，因为这里是星号，所以替换成*FT'并后移输入指针
+
+![img](img/ld12.png)|![img](img/ld13.png)
+
+然后F替换成id往下走，因为已经完了，输入指针指向的是空串，所以只要能换成$\epsilon$就换了。最终
+
+![img](img/ld14.png)|![img](img/ld15.png)
+
+#### 4.1.3 Backtracking
+
+比如Production是这样的：A -> abb | abc，那么如果此时的输入指针指向的恰好就是个a的话，到底是替换成abb还是abc？这俩都是a开头的。因此我们要逐个尝试一下。如果不能匹配了，那就说明我们这条路走的不对，要回去重来。这个过程就叫做**回溯**。
+
+显然，回溯会降低计算机的效率。因此我们要尽可能减少回溯(这里和KMP算法好像啊)，使用**预测分析**(Predictive Parsing)的方法。具体的做法就是，当前输入指针不是指向一个输入的符号吗，我们**再往前看看**，这样就能预测一下到底是哪一个Production更加合适，这样就能预测了。而往前看通常是看1个就够了
+
+### 4.2 Grammar Transformation
+
+刚才刚说过回溯的问题，而自顶向下的分析方法正好就会产生这种问题。我们先来看一个例子
+
+> G:
+>
+> S -> aAd | aBe
+>
+> A -> c
+>
+> B -> b
+>
+> 输入：`abc`
+
+这样当指向a的时候，S的两个候选式都是a开头，就不知道到底用哪个了
+
+除了回溯的问题，还有其他的问题
+
+> G:
+>
+> E -> E + T | E - T | T
+>
+> T -> T * F | T / F | F
+>
+> F -> (E) | id
+>
+> 输入：`id + id * id`
+
+这里的问题是，首先指向id，而Start Symbol右边哪几个没有一个是id开头的，所以只能一个一个试。首先来试试E + T，替换完了，如果采用Left-most的方式，那就是替换最左边那个E，而这个E再一替换还是E + T，这样就会无限循环下去
+
+> $E \Rightarrow E + T$
+>
+> ​	$\Rightarrow E + T + T$
+>
+> ​	$\Rightarrow E + T + T + T$
+>
+> ​	$\Rightarrow \ ......$
+
+那么怎么来消除这种情况呢？首先，这种情况可以统称为**左递归**，而只有一步推导就会产生的叫做**直接左递归**；两步即以上产生的叫做**间接左递归**。首先来看一下如何消除直接左递归
+
+直接左递归包含这样的Production: $A \rightarrow A\alpha$
+
+那么对于一个这样的Production: $A \rightarrow A\alpha | \beta\ (\alpha \neq \epsilon,\ \beta不以A开头)$，我们先来推导一下它能生成什么样的句子
+
+> $A \Rightarrow A\alpha$
+>
+> ​	$\Rightarrow A\alpha\alpha$
+>
+> ​	$\Rightarrow A\alpha\alpha\alpha$
+>
+> ​	$\Rightarrow \ ...$
+>
+> ​	$\Rightarrow \beta\alpha\alpha...\alpha$
+
+其实就是一个$\beta$开头，后面连上若干个$\alpha$(**可以是0个**)，即$r=\beta \alpha^*$
+
+那么我们只需要再引入一个A'，让它形成这样的形式
+
+> $A \rightarrow \beta A'$
+>
+> $A' \rightarrow \alpha A'|\epsilon$
+
+这样在**Left-most Derivation**的过程中，首先替换A的时候就会直接采用带$\beta$的方式，也就不会有无限左递归的问题了。
+
+有了一般的方法，我们怎么运用呢？看一开始的例子，这就是一个典型的直接左递归：
+
+> G:
+>
+> E -> E + T | T
+>
+> T -> T * F | F
+>
+> F -> (E) | id
+>
+> *这里为了简便，删掉了一些*
+
+那么我们要在里面找$A \rightarrow A\alpha$的形式，根据第一条就能看出，E就是A，后面的+T就是$\alpha$，T就是$\beta$。那么我们把这些带到上面化好的式子中：
+
+> $E \rightarrow TE'$
+>
+> $E' \rightarrow +TE'|\epsilon$
+>
+> **别忘了，以上只是改造了第一条，还要以相同的方式改造第二条，因为它也是左递归！**
+>
+> $T \rightarrow FT'$
+>
+> $T' \rightarrow *FT'|\epsilon$
+>
+> **最后一条因为不含$A \rightarrow A\alpha$，所以不用改造**
+>
+> $F \rightarrow (E)|id$
+
+那么如果是多个，应该怎么办呢？这里给出消除直接左递归的一般形式：
+
+如果Production是：$A \rightarrow A\alpha_1|A\alpha_2|...|A\alpha_n|\beta_1|\beta_2|...|\beta_m\ (\alpha_i \neq \epsilon,\ \beta_j不以A开头)$
+
+就可以换成这样的形式：
+
+> $A \rightarrow \beta_1A'|\beta_2A'|...|\beta_mA'$
+>
+> $A' \rightarrow \alpha_1A'|\alpha_2A'|...|\alpha_nA'|\epsilon$
+
+**其实就是，本来是一堆能套娃的串，但是你总得有个头，所以给了个$\beta$来结束。也就是说肯定是要以$\beta$开头的。很显然要是不想在左边套娃，就先把这个$\beta$放上去，然后在右边连接一堆能套娃的式子，也就是将递归从左边转移到了右边**
+
+***另外需要注意的是，这里之所以n和m可以不相等，是因为如果n多的话，那么不够的$\beta$可以用$\epsilon$来凑；而m多的话就更简单，挪出去单独写就可以了***
+
+然后再看一下如何消除间接左递归。其实，间接左递归中一般都会包含直接左递归，以下是一个例子：
+
+> S -> Aa | b
+>
+> A -> Ac | Sd | $\epsilon$
+
+这里第二条很显然是个直接左递归，因为有A -> Ac。那么何来间接左递归呢？我们看以下第一个式子的推导过程
+
+> $S \Rightarrow Aa$
+>
+> ​	$\Rightarrow Sda$
+
+经过了两步推导，我们又发现了S开头的句型。也就是说，这个东西每两次会套一下娃，因此是间接左递归
+
+消除的方法，就是将**S带入A的Production中**：
+
+> $A \rightarrow Ac|Aad|bd|\epsilon$
+
+然后再**消除这个式子的直接左递归**即可。这里按照那个一般形式来转换就可以了
+
+> 这里m和n都是2，那么$\alpha_1 = c,\ \alpha_2 = ad,\ \beta_1 = bd,\ \beta_2 = \epsilon$
+>
+> 带入上面的式子就能得到：
+>
+> $A \rightarrow bdA'|A'$
+>
+> $A' \rightarrow cA'|adA'|\epsilon$
+
+### 4.3 LL(1) Grammar
 
 
 
