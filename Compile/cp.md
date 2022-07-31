@@ -75,6 +75,8 @@
 
 理解终结的含义：单词在这里再继续推导没有意义，也就是字母它本身也不在里面，所以不用继续推导，达到终点
 
+***重点：$\epsilon$不是Nonterminal，也不是Terminal！！！***
+
 ### 2.2 Nonterminal Symbol
 
 非终结符：用来表示**语法成分**的符号，有时也称为**语法变量**
@@ -1018,7 +1020,7 @@ ABC接收2之后会进入C，C是终态
 
 ![img](img/ld14.png)|![img](img/ld15.png)
 
-#### 4.1.3 Backtracking
+#### 4.1.3 Backtracking & Predictive Parsing
 
 比如Production是这样的：A -> abb | abc，那么如果此时的输入指针指向的恰好就是个a的话，到底是替换成abb还是abc？这俩都是a开头的。因此我们要逐个尝试一下。如果不能匹配了，那就说明我们这条路走的不对，要回去重来。这个过程就叫做**回溯**。
 
@@ -1160,5 +1162,203 @@ ABC接收2之后会进入C，C是终态
 
 ### 4.3 LL(1) Grammar
 
+#### 4.3.1 S_Grammar
 
+**S文法**就是简单的(Simple)、确定的(Specific)文法。它要求：
+
+* 每一个Production的右边都要以**Terminal**开始
+* 对于同一个**Nonterminal**，它的所有候选式打头的**Terminal**都要不一样
+
+根据定义可以看出，既然要求要以Terminal开始，那么肯定是不能含空产生式$\epsilon$的。为什么呢？来看个例子
+
+> G:
+>
+> 1. S -> aBC
+> 2. B -> bC
+> 3. B -> dB
+> 4. B -> $\epsilon$
+> 5. C -> c
+> 6. C -> a
+> 7. D -> e
+>
+> 输入：
+>
+> * `ada`
+> * `ade`
+
+先来写一下`ada`的Derive过程，很顺利的
+
+> $S \Rightarrow aBC$
+>
+> ​	$\Rightarrow adBC$		把B按照3换成dB
+>
+> ​	$\Rightarrow ad\epsilon C$		 没有a开头的，所以换成空串
+>
+> ​	$\Rightarrow ada$			最后把C换成a
+
+**但是写`ade`的时候，会出现问题**
+
+> $S \Rightarrow aBC$
+>
+> ​	$\Rightarrow adBC$		把B按照3换成dB
+>
+> ​	$\Rightarrow ad\epsilon C$		 没有e开头的，换成空串
+>
+> ​	$\Rightarrow ad?$
+
+此时发现，最后的C没有以e开头的候选式，所以报错了
+
+因为是和B相关的空产生式，所以来讨论它：空产生式的使用取决于在它的后面到底有什么。这里B的后面是C。由于C只能替换成c和a，所以**能紧跟着B后面出现的Terminal只能是c和a**
+
+另外，在匹配第二个字符时，也就是上面两个输入中的`d`。当前的Nonterminal是B，那么如果这个d不是d而是f的话，也就是说**和当前的Nonterminal的候选式都不匹配的时候**，这时本应该报错的，但是还有个空产生式，那么到底用不用呢？这取决于它后面的东西。**如果这个f能紧跟着B后面出现**，那么把B替换成$\epsilon$是没有问题的，否则就应该报错了
+
+#### 4.3.2 Follow Set
+
+就像刚才说的，这个B后面只能紧跟着出现c和a。那么如果对于一个在**Sentential From**中出现的**Nonterminal**，它后面能紧跟着出现的这些**Terminal**可以形成一个集合，这个集合就叫做**Follow集**。
+$$
+FOLLOW(A) = \{a|S\Rightarrow^*\alpha Aa\beta,\ a\in V_T,\ \alpha,\beta\in(V_T\cup V_N)^*\}
+$$
+这个公式其实很好理解。首先S经过若干步推导，那得到的一定是个句型。然后右边就是左边一个$\alpha$，右边一个$\beta$，中间夹着的就是定义里的东西，其中$\alpha$和$\beta$都是文法中符合规定的任意一个串。
+
+那还有个问题，如果A后面没东西了咋整？难道Follow集里还有空串？前面强调过，**$\epsilon$既不是Terminal也不是Nonterminal**，所以很显然是不能加到这个集合里的。所以我们引入一个结束符**$**，也就是说，**如果句型中如果最右边那个东西是个Nonterminal，那它的Follow集就是{$}**
+
+由以上所说可以推出这个集合的用处了。就比如之前那个例子中的B，如果它后面出现的Terminal正好就在Follow(B)中，那很显然就应该选择这个候选式了。
+
+> G:
+>
+> 1. S -> aBC
+> 2. **B -> bC**
+> 3. **B -> dB**
+> 4. **B -> $\epsilon$**
+> 5. C -> c
+> 6. C -> a
+> 7. D -> e
+
+Follow集就是用在4号这种式子上面的。如果当前的Nonterminal是B，那么我们就计算Follow(B) = {a, c}。计算方法就是往后看，B后面是C，C能替换成c和a，所以这俩的集合就是B的Follow集。然后看当前的输入符号是啥：如果是b，就选2；如果是d，就选3；如果是a或者c(**Follow集中的元素**)，就选4。
+
+另外我们能发现，2号对应的是b开头；3好对应的是d开头；4号对应的是a或者c开头，**它们是不相交的**。
+
+#### 4.3.3 Optional Set
+
+以上说的都是看当前的输入符号，去选择哪个Production。那么我们也可以反着来，就是说看**当前的某一个Production，它能适用于哪些输入符号呢**？这就是**可选集**的由来。
+
+比如上面例子中的第二条：B -> bC。我们知道，只有当前输入符号是b的时候才能选这个。那么也就是说对于这个产生式，它的可选集就是{b}。而如果是第四条的话，就和前一节说的一样，**它的可选集就是Follow集**
+$$
+\begin{align}
+&SELECT(A\rightarrow a\beta)=\{a\}\\
+&SELECT(A\rightarrow\epsilon)=FOLLOW(A)
+\end{align}
+$$
+
+#### 4.3.4 q_Grammar
+
+相对于S文法，q文法更加强大。上面的例子中就是一个q文法
+
+* 每个Production的右边要么是$\epsilon$，要么以Terminal打头
+* 如果Production的左部相同，那么这些Production的可选集不能有交集
+
+这个第二条正好就把S文法的第二条也覆盖了。因为如果是这种：
+
+> A -> abc
+>
+> A -> acc
+
+那么这两条Production的可选集一定有交集，也就是元素a。自然打头的Terminal一定要不一样
+
+*问题：这里仅仅是个人猜想，有待证明*
+
+我们根据q文法的规则也能推测出，q文法中产生式的右部一定不能以Nonterminal打头。
+
+那么我就要以Nonterminal打头该咋办？这样计算可选集的难度会大很多。因为打头的这个还要继续套娃替换，甚至会套娃很多次，所以我们要再了解一些其他的东西。
+
+#### 4.3.5  First Set
+
+现在给定一个串$\alpha$，那很显然，它既可以以Terminal开头，也可以以Nonterminal开头，还可以是空串。
+
+那么我对于这个串，如果它是以Terminal开头的话，很显然它的**首个符号是唯一确定的**。那么此时它的**串首终结符集**就是这个字符了：
+$$
+\begin{align}
+&若S\rightarrow aABe\\
+&则FIRST(S)=\{a\}
+\end{align}
+$$
+然而如果这个串是以Nonterminal开头的话，它的首个符号还要看这个Nonterminal能替换成什么，直到是Terminal为止。并且这个替换方式还可能会有多种，因此这个串的**首个符号不是唯一确定的**。也就是说开头有多种可能，那么所有这些可能组成的集合就是它的First集：
+$$
+\begin{align}
+&若：\\
+&1.\ T \rightarrow FT'\\
+&2.\ F \rightarrow (E)|id\\
+&...\\
+&那么FIRST(T)=\{\ (,\ id\ \}
+\end{align}
+$$
+然后是空串的情况。这里其实有一个小问题。看下面的例子：
+
+> 1. A -> BC
+> 2. B -> $\epsilon$
+> 3. C -> $\epsilon$
+
+这里1号是以Nonterminal开头的，但是这个Nonterminal却只能被替换成空串。因此空串的情况应该并到上面当中。实际上，如果$\alpha \Rightarrow^*\epsilon$，那么$\epsilon$也在$FIRST(\alpha)$中
+
+有了这些，我们结合一下4.3.3中说的可选集的概念。
+
+*这里补充一下。可选集表示的是**被选择**的关系。也就是这个产生式能在输入什么的时候被选择呢？就是可选集中的元素。*
+$$
+\begin{align}
+&SELECT(A\rightarrow a\beta)=\{a\}\\
+&SELECT(A\rightarrow\epsilon)=FOLLOW(A)
+\end{align}
+$$
+看第一条，是不是和FIRST集有很大的相似？没错！如果我们把右边的$a\beta$看成一个大串$\alpha$，那么很显然$\epsilon\notin FIRST(\alpha)$。因为这个大串根本推到不出来空串(其实$FIRST(\alpha)=\{a\}$根据上面说的就能算出来)。那么这整个Production的可选集就是这个右部大串的FIRST集：
+$$
+SELECT(A\rightarrow\alpha)=FIRST(\alpha)\ (\epsilon\notin FIRST(\alpha))
+$$
+然后再看第二条。之前说过，当右边是空串的时候，要往后再看看，后面会出现什么，也就是FOLLOW集中的东西。那么如果对于任意一个大串$\alpha$，它如果能推导出空串的话，显然$\epsilon\in FIRST(\alpha)$。那么此时的可选集不但要包含大串的FIRST集，也要包含左部的FOLLOW集：
+$$
+SELECT(A\rightarrow\alpha)=[FIRST(\alpha)-\{\epsilon\}]\cup FOLLOW(A)\ (\epsilon\in FIRST(\alpha))
+$$
+这里要减掉{$\epsilon$}的原因是，可选集的右边表示的是输入的符号，总不可能是空串吧！
+
+#### 4.3.6 Left-Right Left-most (1) Grammar
+
+先来回顾下，整个4.3都是为了干什么。4.1.3中我们提到了Backtracking和Predictive Parsing。预测分析就是用来避免掉回溯的。那么我们怎么做到预测分析呢？就是**让每个输入符号只能对应一个候选式**。那么怎么做到呢？正好可选集就表示了被选择的关系。那么我们只需要**让所有的可选集都不相交**，自然就不会有**"两个候选式被同一个输入符号选择"**的情况了。而像S文法和q文法中的第二条，也正是为了达到这样的效果。而我们的LL(1)文法也是为了这个。那么它和前两个有啥区别呢？前两个文法很鸡肋啊！比如S文法，它只能以Terminal开头，限制就已经很大了。根本不允许在开始就套娃；而q文法也只是在S的基础上加了一个空串。而LL(1)文法就不会有这样的限制，并且也能做到每个输入符号只对应一个候选式。
+
+首先，既然是文法，肯定要有产生式(这不废话吗...)。那么如果有这样的：$A\rightarrow\alpha|\beta$，右部这两个就是俩串。
+
+* 当这俩串都不能推导出空串时，我们想要保证：
+
+  * $A\rightarrow\alpha$
+  * $A\rightarrow\beta$
+
+  这俩产生式的可选集不能相交，因为在不能推导出空穿时前面也说了，可选集就是FIRST集。自然只需要保证
+  $$
+  FIRST(\alpha)\cap FIRST(\beta)=\O
+  $$
+  FIRST集不相交，自然可选集也不相交
+
+* 当$\alpha$能推出空串，但是$\beta$不能时，我们先分别写一下他们的可选集
+  $$
+  \begin{align}
+  &SELECT(A\rightarrow\alpha)=[FIRST(\alpha)-\{\epsilon\}]\cup FOLLOW(A)\\
+  &SELECT(A\rightarrow\beta)=FIRST(\beta)
+  \end{align}
+  $$
+  我们既然要让等号左边不相交，让等号右边不相交就行了！那么我们就需要保证
+  $$
+  \begin{align}
+  &FIRST(\beta)\cap FOLLOW(A)=\O\\
+  &FIRST(\beta)\cap FIRST(\alpha)=\O
+  \end{align}
+  $$
+  *问题：PPT中只给了第一条，这第二条不需要吗难道？*
+
+* 如果反过来，也就是$\beta$能推出空串但是$\alpha$不能，只需要把这俩换一下就行了
+  $$
+  \begin{align}
+  &FIRST(\alpha)\cap FOLLOW(A)=\O\\
+  &FIRST(\alpha)\cap FIRST(\beta)=\O
+  \end{align}
+  $$
+
+* 如果它俩都能推出空串，这种情况不存在。因为如果都能，它们的可选集里都有FOLLOW(A)，那本身就已经相交了
 
