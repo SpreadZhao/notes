@@ -1238,7 +1238,7 @@ Follow集就是用在4号这种式子上面的。如果当前的Nonterminal是B�
 
 另外我们能发现，2号对应的是b开头；3好对应的是d开头；4号对应的是a或者c开头，**它们是不相交的**。
 
-#### 4.3.3 Optional Set
+#### 4.3.3 Selection Set
 
 以上说的都是看当前的输入符号，去选择哪个Production。那么我们也可以反着来，就是说看**当前的某一个Production，它能适用于哪些输入符号呢**？这就是**可选集**的由来。
 
@@ -1298,7 +1298,7 @@ $$
 > 2. B -> $\epsilon$
 > 3. C -> $\epsilon$
 
-这里1号是以Nonterminal开头的，但是这个Nonterminal却只能被替换成空串。因此空串的情况应该并到上面当中。实际上，如果$\alpha \Rightarrow^*\epsilon$，那么$\epsilon$也在$FIRST(\alpha)$中
+这里1号是以Nonterminal开头的，但是这个Nonterminal却只能被替换成空串。因此空串的情况应该并到上面当中。**实际上，如果$\alpha \Rightarrow^*\epsilon$，那么$\epsilon$也在$FIRST(\alpha)$中**。
 
 有了这些，我们结合一下4.3.3中说的可选集的概念。
 
@@ -1330,7 +1330,7 @@ $$
   * $A\rightarrow\alpha$
   * $A\rightarrow\beta$
 
-  这俩产生式的可选集不能相交，因为在不能推导出空穿时前面也说了，可选集就是FIRST集。自然只需要保证
+  这俩产生式的可选集不能相交，因为在不能推导出空串时前面也说了，可选集就是FIRST集。自然只需要保证
   $$
   FIRST(\alpha)\cap FIRST(\beta)=\O
   $$
@@ -1362,3 +1362,179 @@ $$
 
 * 如果它俩都能推出空串，这种情况不存在。因为如果都能，它们的可选集里都有FOLLOW(A)，那本身就已经相交了
 
+#### 4.3.7 Calculation
+
+文法中有如下产生式：
+
+* E -> TE'
+* E' -> +TE' | $\epsilon$
+* T -> FT'
+* T' -> *FT' | $\epsilon$
+* F -> (E) | id
+
+计算E, E', T, T', F的FIRST集和FOLLOW集，并计算每个产生式的SELECT集
+
+> ==**1. 计算FIRST集**==
+>
+> 首先我们从Terminal打头的入手
+>
+> * E -> TE'							FIRST(E) = {}
+> * E' -> +TE' | $\epsilon$ 			 	   FIRST(E') = {}
+> * T -> FT'							FIRST(T) = {}
+> * T' -> *FT' | $\epsilon$						FIRST(T') = {}
+> * F -> (E) | id						FIRST(F) = {}
+>
+> 也就是E'，T'和F。它们分别以+，*和(打头，同时F还有一个id，那么直接写进去
+>
+> * E -> TE'							FIRST(E) = {}
+> * E' -> +TE' | $\epsilon$ 			 	   FIRST(E') = {+}
+> * T -> FT'							FIRST(T) = {}
+> * T' -> *FT' | $\epsilon$						FIRST(T') = {\*}
+> * F -> (E) | id						FIRST(F) = {(, id}
+>
+> 然后再来逐个给Nonterminal打头的套娃。首先是E，它以T开头，而T此时还没确定，所以先来T
+>
+> T以F开头，而F以(或者id开头，所以T肯定也是以(或者id开头
+>
+> * E -> TE'							FIRST(E) = {}
+> * E' -> +TE' | $\epsilon$ 			 	   FIRST(E') = {+}
+> * T -> FT'							FIRST(T) = {(, id}
+> * T' -> *FT' | $\epsilon$						FIRST(T') = {\*}
+> * F -> (E) | id						FIRST(F) = {(, id}
+>
+> 那么既然E以T开头，E就也会以(或者id开头
+>
+> * E -> TE'							FIRST(E) = {(, id}
+> * E' -> +TE' | $\epsilon$ 			 	   FIRST(E') = {+}
+> * T -> FT'							FIRST(T) = {(, id}
+> * T' -> *FT' | $\epsilon$						FIRST(T') = {\*}
+> * F -> (E) | id						FIRST(F) = {(, id}
+>
+> **千万别忘了空串。空串是可以在FIRST集中的！**
+>
+> * E -> TE'							FIRST(E) = {(, id}
+> * E' -> +TE' | $\epsilon$ 			 	   FIRST(E') = {+, $\epsilon$}
+> * T -> FT'							FIRST(T) = {(, id}
+> * T' -> *FT' | $\epsilon$						FIRST(T') = {\*, $\epsilon$}
+> * F -> (E) | id						FIRST(F) = {(, id}
+
+> **==2. 计算FOLLOW集==**
+>
+> 既然FOLLOW集是紧跟着某一个Nonterminal后面出现的，那么肯定是根据后面那个东西的FIRST集来的。所以我们要先计算它们的FIRST集
+>
+> * E -> TE'							FIRST(E) = {(, id}				FOLLOW(E) = {}
+> * E' -> +TE' | $\epsilon$ 			 	   FIRST(E') = {+, $\epsilon$}				FOLLOW(E') = {}
+> * T -> FT'							FIRST(T) = {(, id}				FOLLOW(T) = {}
+> * T' -> *FT' | $\epsilon$						FIRST(T') = {\*, $\epsilon$}				FOLLOW(T') = {}
+> * F -> (E) | id						FIRST(F) = {(, id}				FOLLOW(F) = {}
+>
+> 首先从E开始，也就是FOLLOW(T)。T的后面是E'，那么T后面紧跟着出现的就是E'的FIRST集中的内容。**然而E'可以推导出空串，也就是T之后可以是$\epsilon$，则T的FOLLOW集中也应该有'$'符号**。
+>
+> **另外，这个E作为开始符号，本身也是个句型，它的后面本身就啥也没有，所以也要加上$**
+>
+> 对于这个最后的E'，它后面没东西。所以**能加在E后面的也能加在E'后面**，也就是把E的FOLLOW集里的全家在E'的FOLLOW集中。虽然就是一个$
+>
+> * E -> TE'							FIRST(E) = {(, id}				FOLLOW(E) = {$}
+> * E' -> +TE' | $\epsilon$ 			 	   FIRST(E') = {+, $\epsilon$}				FOLLOW(E') = {$}
+> * T -> FT'							FIRST(T) = {(, id}				FOLLOW(T) = {+, $}
+> * T' -> *FT' | $\epsilon$						FIRST(T') = {\*, $\epsilon$}				FOLLOW(T') = {}
+> * F -> (E) | id						FIRST(F) = {(, id}				FOLLOW(F) = {}
+>
+> 然后是第二个产生式。因为这里T和E'和第一个位置一样，所以分析结果也一样。
+>
+> 然后是第三个。这里计算的显然就是FOLLOW(F)和FOLLOW(T')。F后面出现的就是T'的FIRST集，所以F的FOLLOW集里要加上\*；另外同理，因为T'能推出空串，所以也要加上$
+>
+> **漏了！因为T'能推出空串，所以这个产生式可以变成T -> F。代表能加在T后面的也能加在F后面。所以F的FOLLOW集应该有T的FOLLOW集里所有的东西，即+和$**
+>
+> 对于T'，它后面首先啥也没有，所以肯定有$；**另外能加在T后面的也能加在T'后面，所以T'也应该有T的FOLLOW集**
+>
+> * E -> TE'							FIRST(E) = {(, id}				FOLLOW(E) = {$, )}
+> * E' -> +TE' | $\epsilon$ 			 	   FIRST(E') = {+, $\epsilon$}				FOLLOW(E') = {$}
+> * T -> FT'							FIRST(T) = {(, id}				FOLLOW(T) = {+, $}
+> * T' -> *FT' | $\epsilon$						FIRST(T') = {\*, $\epsilon$}				FOLLOW(T') = {+, $}
+> * F -> (E) | id						FIRST(F) = {(, id}				FOLLOW(F) = {\*, $, +}
+>
+> 之后是第四条。因为第四条里F和T'和第三条一样，所以也不用来了。
+>
+> 最后是第五条。这里只有E需要看。因为E后面只能有)是唯一确定的，所以加进去就行了。
+>
+> **算完了吗？没有！我们再回头看，会发现少了许多东西**
+>
+> 第一句时，给出T的FOLLOW集中应该有E的FOLLOW集(**因为E'能推出空串**)。而这时E的FOLLOW集已经被更新了，所以要再改一下；另外，E'的FOLLOW集也要有E的FOLLOW集，所以也要跟着改。
+>
+> * E -> TE'							FIRST(E) = {(, id}				FOLLOW(E) = {$, )}
+> * E' -> +TE' | $\epsilon$ 			 	   FIRST(E') = {+, $\epsilon$}				FOLLOW(E') = {$, )}
+> * T -> FT'							FIRST(T) = {(, id}				FOLLOW(T) = {+, $, )}
+> * T' -> *FT' | $\epsilon$						FIRST(T') = {\*, $\epsilon$}				FOLLOW(T') = {+, $}
+> * F -> (E) | id						FIRST(F) = {(, id}				FOLLOW(F) = {\*, $, +}
+>
+> 第三句中，T'后面出现的应该包括T后面出现的所有；另外T'能变空串，所以F后面出现的也应该包括T后面出现的所有
+>
+> * E -> TE'							FIRST(E) = {(, id}				FOLLOW(E) = {$, )}
+> * E' -> +TE' | $\epsilon$ 			 	   FIRST(E') = {+, $\epsilon$}				FOLLOW(E') = {$, )}
+> * T -> FT'							FIRST(T) = {(, id}				FOLLOW(T) = {+, $, )}
+> * T' -> *FT' | $\epsilon$						FIRST(T') = {\*, $\epsilon$}				FOLLOW(T') = {+, $, )}
+> * F -> (E) | id						FIRST(F) = {(, id}				FOLLOW(F) = {\*, $, +, )}
+>
+> 然后第四句和第五句都分析不出啥，所以第二轮结束
+>
+> **算完了吗？可能还没有！因为FOLLOW集还是有更新，要算到"在某一轮中，一个FOLLOW集都没更新"这种情况出现时，才能算圆满完成！**
+>
+> 再来一轮，发现所有FOLLOW集都没更新，这才真算完了！
+
+> **==3. 计算SELECT集==**
+>
+> 首先要把产生式给全都分开
+>
+> 1. E -> TE'
+> 2. E' -> +TE'
+> 3. E' -> $\epsilon$
+> 4. T -> FT'
+> 5. T' -> *FT'
+> 6. T' -> $\epsilon$
+> 7. F -> (E)
+> 8. F -> id
+>
+> 然后列出所有Nonterminal的FIRST集和FOLLOW集
+>
+> * FIRST(E) = {(, id}				FOLLOW(E) = {$, )}
+> * FIRST(E') = {+, $\epsilon$}				FOLLOW(E') = {$, )}
+> * FIRST(T) = {(, id}				FOLLOW(T) = {+, $, )}
+> * FIRST(T') = {\*, $\epsilon$}				FOLLOW(T') = {+, $, )}
+> * FIRST(F) = {(, id}				FOLLOW(F) = {\*, $, +, )}
+>
+> 然后从第一条Production开始，运用这样的想法：**我在输入什么的时候，才会选到1号产生式呢？**很显然，在我当前输入的符号是以T的FIRST集中的元素开头的时候，我才会选择这个产生式来进行替换。所以**1号的可选集就是T的FIRST集**。
+> $$
+> SELECT(1)=\{(,\ id\}
+> $$
+> 然后是第二条。因为这是以Terminal开头的，所以别无选择，只有输入符号是+的时候才会选它。
+> $$
+> SELECT(2)=\{+\}
+> $$
+> 第三条中，因为E'可以变空串，所以E'后面紧跟着出现的东西正好是我当前输入的符号的话，我也能选它。这正对应了E'的FOLLOW集。
+> $$
+> SELECT(3)=\{$,\ )\}
+> $$
+> 第四条中，类比第一条，这条产生式的可选集自然要有F的FIRST集中的内容。
+> $$
+> SELECT(4)=\{(,\ id\}
+> $$
+> 第五条中和第二条一样，只有一个星号。
+> $$
+> SELECT(5)=\{*\}
+> $$
+> 第六条和第三条差不多，对应T'的FOLLOW集。
+> $$
+> SELECT(6)=\{+,\ $,\ )\}
+> $$
+> 然后是第七条，不用多说
+> $$
+> SELECT(7)=\{(\}
+> $$
+> 第八条也是一样
+> $$
+> SELECT(8)=\{id\}
+> $$
+> **这道题有一种特殊情况没涉及到。比如说第四条：有F的FIRST集自当天经地义；但是如果F能推出空串的话，也就是F压根不存在，那么开头就变成了F之后的东西，也就是F的FOLLOW集中的东西也应该有。**
+
+总结：通过这道题，和之前的概念，我们也能发现，FOLLOW集是用在单个的Nonterminal上的，而FIRST集是用在串上的。因为Nonterminal本身也是一个串，所以自然都可以。而SELECT集是用在产生式上的，因此才会由小到大的计算。另外，FIRST集中要么是Terminal，要么是$\epsilon$；而FOLLOW集本身就是Terminal的集合，自然不能有$\epsilon$，而是用$代替；而SELECT集中因为表示的是输入符号，肯定要有意义，所以元素种类和FOLLOW集中的是一样的。
