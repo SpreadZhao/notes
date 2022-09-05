@@ -1,12 +1,12 @@
 # 操作系统笔记
 
-## Process
+## 1. Process
 
-### Definition
+### 1.1 Definition
 
 ​	An abstraction of a running program
 
-### Internal Structure
+### 1.2 Internal Structure
 
 * Code Segment(Read-Only)
 
@@ -20,7 +20,7 @@
 
   > 分区：方便安全
 
-### Address Space: 进程之间互不相干
+### 1.3 Address Space: 进程之间互不相干
 
 * Kernel Space：系统内核
 * User Space：应用程序
@@ -28,15 +28,15 @@
 * User Mode = User Space + User Privilege
 * Kernel Mode和User Mode区别：<u>Kernel下代码可访问硬件</u>
 
-### PCB - Process Control Block
+### 1.4 PCB - Process Control Block
 
 * 开2个记事本，咋知道关的是哪一个 -> 通过PCB中的PID
 
-### Program和Process区别
+### 1.5 Program和Process区别
 
 * Program 有 Code Segment, Data Segment, Address Space, **没有 PCB, Stack Segment**
 
-### Stack Segment
+### 1.6 Stack Segment
 
 ​		比如 a() 调用 b() 再调用 c(), c() 里有变量t1, t2, t3, b() 里有y1, y2, y3, 则**c() 最后执行，最先执行完毕，t1, t2, t3 最先被分配，最先被释放，正好使用stack管理。**下面是一个例子：
 
@@ -69,21 +69,21 @@
 
 由于是从低地址拷贝到高地址，因此拷贝的16byte会将low覆盖。**同时我们也能看出，Stack Segment存放的是局部变量和函数的返回地址**
 
-### Process Model
+### 1.7 Process Model
 
 ​		一会儿切一个Process在CPU的一个核上
 
 <img src="img/processmodel.png" alt="img" style="zoom:67%;" />
 
-### Process State
+### 1.8 Process State
 
 <img src="img/processstate.png" alt="img" style="zoom:67%;" />
 
-#### Process Creation
+#### 1.8.1 Process Creation
 
 > **`pstree`命令，可以看到, 由 systemd(1号)生成其他进程**
 
-##### Four time for creation
+##### 1.8.1.1 Four time for creation
 
 * System Initialization
 
@@ -101,7 +101,7 @@
 
   > 比如bash
 
-##### Implementation-Creation: fork, exec
+##### 1.8.1.2 Implementation-Creation: fork, exec
 
 * Fork
 
@@ -215,7 +215,7 @@
   >
   > ![img](img/execl.png)
 
-#### Process Termination
+#### 1.8.2 Process Termination
 
 时机
 
@@ -275,7 +275,7 @@
   >
   >  ![img](img/adopted.png)
 
-##### Process Termination Implementation
+##### 1.8.2.1 Process Termination Implementation
 
 * 尸检时
 
@@ -293,15 +293,15 @@
 
   ![img](img/pcbcontent.png)
 
-### Process Model Implementation
+### 1.9 Process Model Implementation
 
-#### Process Switching
+#### 1.9.1 Process Switching
 
 <img src="img/psswitch.png" alt="img" style="zoom:67%;" />
 
-## Thread
+## 2. Thread
 
-### An example
+### 2.1 An example
 
 ```c
 #include <stdio.h>
@@ -336,24 +336,24 @@ Result
 
 <img src="img/threadhaha.png" alt="img" style="zoom:50%;" />
 
-### Definition
+### 2.2 Definition
 
 >进程中正在执行的代码片段，其可以与其他片段并发执行
 >
 >**<u>一个Process的不同Thread不共享Stack</u>**
 
-### Thread Model
+### 2.3 Thread Model
 
 <img src="img/threadmodel.png" alt="img" style="zoom:67%;" />
 
-### Why Thread?
+### 2.4 Why Thread?
 
 1. 在一个application里有多个活动，其中一些会block，这时把app分成几个能并行的顺序线程，模型会更简单
 2. Thread比Process更容易创建/消除
 3. ![img](img/whythread3.png)
 4. Finally, threads are useful on systems with multiple CPUs, where real parallelism is possible.
 
-### Implementation of  thread model
+### 2.5 Implementation of  thread model
 
 * TCB(Thread Control Block)
 
@@ -397,7 +397,7 @@ Result
   
      ><img src="img/thbdpb.png" alt="img" style="zoom:67%;" />
 
-### POSIX Thread-学会！
+### 2.6 POSIX Thread-学会！
 
 * IEEE定义的线程包：pthread
 
@@ -407,7 +407,7 @@ Result
 
   > 可移植，通用
 
-### Pop-Up Thread
+### 2.7 Pop-Up Thread
 
 * Definition, Advantage
 
@@ -421,17 +421,17 @@ Result
   >
   >传统：将Process或Thread阻塞在一个receive系统调用上，等待message，而Pop-Up Thread在message来时才创建，remove了block
 
-## IPC(Inter Process Communication)
+## 3. IPC(Inter Process Communication)
 
-### Race Conditions
+### 3.1 Race Conditions
 
 <img src="img/rccd.png" alt="img" style="zoom:50%;" />
 
-### Critical Region
+### 3.2 Critical Region
 
 >**The part of the program where the shared memory is accessed is called the critical region**
 
-### How to avoid race conditions?
+### 3.3 How to avoid race conditions?
 
 * Mutual Exclusion(十字路口)
 
@@ -799,14 +799,14 @@ Result
       >
       > ```c
       > send(destination, &message);
-<<<<<<< HEAD
+      <<<<<<< HEAD
       > ```
     > receive(source, &message);
     >
     > ```
     > 
     > ```
-=======
+  =======
   
   
   
@@ -850,23 +850,23 @@ Result
   
     <img src="img/barrier.png" alt="img" style="zoom:67%;" />
 
-## Scheduling
+## 4. Scheduling
 
 * 用于所有Process之间(之前的IPC是两个或几个Process之间)
 
-### Problem
+### 4.1 Problem
 
 * **一些Process已经就绪，哪个该放到CPU上跑呢？**
 * **调度为何不是时时刻刻发生，而是有间隔的发生？**
 
-### When to Schedule?
+### 4.2 When to Schedule?
 
 * Process creation
 * Process exit
 * Process blocks on I/O
 * I/O interrupt (**比如网络包到了，会发一个中断，运行接包的Process**)
 
-### Scheduling Algorithm
+### 4.3 Scheduling Algorithm
 
 >Category
 >
@@ -891,7 +891,7 @@ Result
 >* Waiting time - amount of time a process has been waiting in the ready queue
 >* Response time - amount of time it takes from when a request was submitted unitl the first response is produced, not output (for time-sharing environment)
 
-#### FCFS Example
+#### 4.3.1 FCFS Example
 
 | Process | Burst Time |
 | ------- | ---------- |
@@ -913,7 +913,7 @@ Average turnaround time
 
 > (24 + 27 + 30) / 3 = 27
 
-#### SJF Example(Non Preemptive)
+#### 4.3.2 SJF Example(Non Preemptive)
 
 | Process | Arrival Time | Burst Time |
 | ------- | ------------ | ---------- |
@@ -933,7 +933,7 @@ Average turnaround time
 
 >[(7 - 0) + (8 - 4) + (12 - 2) + (16 - 5)] / 4 = 8
 
-#### SJF Example(Preemptive)
+#### 4.3.3 SJF Example(Preemptive)
 
 | Process | Arrival Time | Burst Time |
 | ------- | ------------ | ---------- |
@@ -954,21 +954,21 @@ Average turnaround time
 
 >[(16 - 0) + (7 - 2) + (5 - 4) + (11 - 5) / 4]  = 7
 
-### Interactive System Scheduling
+### 4.4 Interactive System Scheduling
 
-#### Round Robin
+#### 4.4.1 Round Robin
 
 <img src="img/rr.png" alt="img" style="zoom:67%;" />
 
-#### Priority Scheduling
+#### 4.4.2 Priority Scheduling
 
 <img src="img/prioritysc.png" alt="img" style="zoom:67%;" />
 
-#### Multiple Queue
+#### 4.4.3 Multiple Queue
 
 <img src="img/mqueue.png" alt="img" style="zoom:67%;" />
 
-#### Guaranteed Scheduling
+#### 4.4.4 Guaranteed Scheduling
 
 若Process已经Ready，保证10s内能运行1s
 
@@ -980,28 +980,28 @@ Average turnaround time
 
 **应用：花多少米，得多少时间**
 
-#### Lottery Scheduling
+#### 4.4.5 Lottery Scheduling
 
 * Give processes lottery tickets for various system resources, such as CPU time
 * Whenever a scheduling decision has to be made, a lottery ticket is chosen at random, and **the process holding that ticket gets the resource**
 
-#### Fair-Share Scheduling(FSS)
+#### 4.4.6 Fair-Share Scheduling(FSS)
 
 * 可以看做Guaranteed Scheduling的特例
 * A和B交一样钱，但是A有10000000个Process，B就1个，则CPU全被A给抢了，那么就要保证A和B不管有几个Process，CPU时间都要平分
 
-#### Real-Time Scheduling
+#### 4.4.7 Real-Time Scheduling
 
 * Hard Real-Time：必须在时限前搞定(**飞机计算，否则飞机炸**)
 * Soft Real-Time：可以通融(**网络视频，卡了还行**)
 
-### Schedulable
+### 4.5 Schedulable
 
 >可调度序列
 >
 >There's existed one scheduling sequence that make **every process** meet their deadline
 
-### Policy Versus Mechanism
+### 4.6 Policy Versus Mechanism
 
 Separate the scheduling mechanism from the scheduling policy
 
@@ -1011,7 +1011,7 @@ Separate the scheduling mechanism from the scheduling policy
 
   > **Exercise: 把Thread绑到CPU的一个核上(Linux)**
 
-### Thread Scheduling
+### 4.7 Thread Scheduling
 
 | Implementation in: | Kernel Space | User Space                      |
 | ------------------ | ------------ | ------------------------------- |
@@ -1020,9 +1020,9 @@ Separate the scheduling mechanism from the scheduling policy
 
 *问题：为啥实现在Kernel Space进行线程调度的开销大呢？不是应该取决于我这个线程放在用户空间还是内核空间吗？如果线程本来就是放在内核空间的，那么在内核空间调度内核空间的线程花费应该是更少的吧*
 
-## Classical IPC Problems
+## 5. Classical IPC Problems
 
-### Dining Philosophers Problem
+### 5.1 Dining Philosophers Problem
 
 * 哲学家：吃/思考
 * 吃需要2个fork
@@ -1057,13 +1057,13 @@ void philosopher(int i) 					 /*i: philosopher number, from 0 to 4*/
 > * Prevent deadlock
 > * 尽量多并发
 
-### Readers and writers Problem
+### 5.2 Readers and writers Problem
 
 <img src="img/raw.png" alt="img" style="zoom:80%;" />
 
 **如果有读者，那么读者随便进，写者不能进，因为后来的读者，rc != 1，不会走down(&db)这句话**
 
-### Sleeping Barber
+### 5.3 Sleeping Barber
 
 * 理发店里有一位理发师、一把理发椅和n把供等候理发的顾客坐的椅子
 * 如果没有顾客，理发师便在理发椅上睡觉
@@ -1116,7 +1116,7 @@ void customer(void){
 }
 ```
 
-### Driver and  Seller
+### 5.4 Driver and  Seller
 
 原则
 
@@ -1159,15 +1159,15 @@ Ticket_Seller(){
 }
 ```
 
-## Memory Management
+## 6. Memory Management
 
-### MM Overview
+### 6.1 MM Overview
 
-#### **What will happen if no Memory Abstraction?**
+#### 6.1.1 **What will happen if no Memory Abstraction?**
 
 <img src="img/noma.png" alt="img" style="zoom:67%;" />
 
-#### **How to solve?**
+#### **6.1.2 How to solve?**
 
 Propose an Abstract Concept - **Address Space**
 
@@ -1181,7 +1181,7 @@ Implementation: Use **Static relocation(静态重定位)**
 >
 > ![img](img/sr.png)
 
-#### **Memory Abstraction**
+#### 6.1.3 **Memory Abstraction**
 
 Solution of Static relocation Problem -> **Dynamic**
 
@@ -1216,7 +1216,7 @@ Another Problem
 
   <img src="img/drp.png" alt="img" style="zoom:60%;" />
 
-#### Free Space Management(**Dynamic**)
+#### 6.1.4 Free Space Management(**Dynamic**)
 
 * bit map & list
 
@@ -1237,7 +1237,7 @@ Another Problem
 
   >As an example of first fit and best fit, consider example forward again. If a block of size 2 is needed, first fit will allocate the hole at 5, but best fit will allocate the hole at 18
 
-### Virtual Memory
+### 6.2 Virtual Memory
 
 Problem
 
@@ -1267,11 +1267,11 @@ Why introduce Virtual Address?
 2. 内存效率原来很低，会大量swap，现在swap就少了
 3. 原来swap回来的Process的地址总是变
 
-#### **Paging**
+#### 6.2.1 **Paging**
 
 <img src="img/paging.png" alt="img" style="zoom:67%;" />
 
-#### **Virtual Address Translation**
+#### **6.2.2 Virtual Address Translation**
 
 <img src="img/vat.png" alt="img" style="zoom:67%;" />
 
@@ -1322,7 +1322,7 @@ Inverted Table
 > * 普通Page Table每一个Process一张
 > * Inverted Table全局就一张
 
-#### Page Replacement Algorithms
+#### 6.2.3 Page Replacement Algorithms
 
 Page Fault: 缺页中断(**Abscent位**)
 
@@ -1426,15 +1426,15 @@ Page Fault: 缺页中断(**Abscent位**)
   > * 0：拍死，换出去
   > * 1：再给次机会，放到栈顶
 
-### Design Issues
+### 6.3 Design Issues
 
-#### Local & Global
+#### 6.3.1 Local & Global
 
 <img src="img/lg.png" alt="img" style="zoom:60%;" />
 
 > **Age: 上次访问的时刻，越小表示越久没用了**
 
-#### Page Fault Frequency(PFF)
+#### 6.3.2 Page Fault Frequency(PFF)
 
 <img src="img/pff.png" alt="img" style="zoom:60%;" />
 
@@ -1444,7 +1444,7 @@ Page Fault: 缺页中断(**Abscent位**)
 >
 > 多分的Page肯定不是自己的，所以PFF建立在Global Replacement上
 
-#### Thrashing
+#### 6.3.3 Thrashing
 
 一个Page刚被换出去，又要被访问，就又被换回来，然后又出去又回来……
 
@@ -1507,7 +1507,7 @@ Solution：加内存！
 
   **当s = 1MB，e = 8B时，算出p = 4KB**
 
-#### Increase Address Space
+#### 6.3.4 Increase Address Space
 
 如果内存足够大，Single address Space就够了
 
@@ -1521,7 +1521,7 @@ Solution：加内存！
 
 这样，一个Process有2个Page Table，分别在要翻译的时候对应自己的，这样变向扩大了内存(**运用Dynamic relocation**)
 
-#### Shared Memory
+#### 6.3.5 Shared Memory
 
 * Create: shmget
 
@@ -1537,7 +1537,7 @@ Solution：加内存！
 
   <img src="img/shmrd.png" alt="img" style="zoom:67%;" />
 
-#### Shared Library
+#### 6.3.6 Shared Library
 
 * Shared Memory -> Data Share
 * Shared Library -> Code Share
@@ -1550,7 +1550,7 @@ Solution：加内存！
 
 > **Exercise: c + gcc -> Shared Library**
 
-#### Mapped Files
+#### 6.3.7 Mapped Files
 
 > Mapped files provide an alternative model for I/O. Instead of doing reads and writes, the file can be accessed as a big character array in memory. In some situations, programmers find this model more convenient.
 
@@ -1605,15 +1605,15 @@ int main()
 > 	truncate -s 5 haha
 > 将其长度改为5，否则会出错，错误名busy bus。
 
-#### Virtual Memory Interface
+#### 6.3.8 Virtual Memory Interface
 
 **Linux: /proc**，看Memory Manage info
 
 proc特点：不留在磁盘上，动态生成
 
-### Implementation Issues
+### 6.4 Implementation Issues
 
-#### Time for paging
+#### 6.4.1 Time for paging
 
 1. Process Creation
 
@@ -1639,7 +1639,7 @@ proc特点：不留在磁盘上，动态生成
 
    > * **Release Page Table, Pages**
 
-#### RISC and CISC
+#### 6.4.2 RISC and CISC
 
 * RISC: Reduced Instruction Set Computers，每条Ins等长
 * CISC: Complex Instruction Set Computers，每条Ins不等长
@@ -1678,7 +1678,7 @@ CISC与RISC的区别
   控制器实现方式 绝大多数为微程序控制 绝大多数为硬布线控制
   软件系统开发时间 较短 较长
 
-#### Instruction Backup
+#### 6.4.3 Instruction Backup
 
 <img src="img/ib.png" alt="img" style="zoom:60%;" />
 
@@ -1692,7 +1692,7 @@ CISC与RISC的区别
 
 比如在TSL处产生了一个普通中断，要等TSL完成后，普通中断程序运行，**其返回值是TSL的下一条**，也就是说，**普通中断不管TSL成功与否**
 
-#### Paging With I/O
+#### 6.4.4 Paging With I/O
 
 * Locking Pages in Memory
 
@@ -1712,11 +1712,11 @@ CISC与RISC的区别
   >
   > **Exercise：Linux生成交换文件**
 
-#### Separation of Policy and Mechanism
+#### 6.4.5 Separation of Policy and Mechanism
 
 <img src="img/sopam.png" alt="img" style="zoom:60%;" />
 
-#### Segmentation
+#### 6.4.6 Segmentation
 
 > *什么是段？*
 >
@@ -1755,9 +1755,9 @@ MULTICS：多级翻译
 	ARM 是一种封闭的指令集架构，众多只用 ARM 架构的厂商，只能根据自身需求，调整产品频率和功耗，不得改变原有设计，经过几十年的发展演变，CPU 架构变得极为复杂和冗繁，ARM 架构文档长达数千页，指令数目复杂，版本众多，彼此之间既不兼容，也不支持模块化，并且存在着高昂的专利和架构授权问题。
 	反观 RISC-V，在设计之初，就定位为是一种完全开源的架构，规避了计算机体系几十年发展的弯路，架构文档只有二百多页，基本指令数目仅 40 多条，同时一套指令集支持所有架构，模块化使得用户可根据需求自由定制，配置不同的指令子集。
 
-## File System
+## 7. File System
 
-### File System Overview
+### 7.1 File System Overview
 
 File System = File + **File Management**
 
@@ -1773,9 +1773,9 @@ Why File System?
 
   容灾性(xp非法关机)，文件缓存(提高文件命中率，访问速度)，实时性
 
-### Files
+### 7.2 Files
 
-#### File Naming
+#### 7.2.1 File Naming
 
 Why file naming
 
@@ -1791,7 +1791,7 @@ Example: regedit on Windows
 >
 > 如果注册表受到了破坏，轻则使windows的启动过程出现异常，重则可能会导致整个windows系统的完全瘫痪。因此正确地认识、使用，特别是及时备份以及有问题恢复注册表对windows用户来说就显得非常重要。
 
-#### File Types
+#### 7.2.2 File Types
 
 * Regular file
 * Device file
@@ -1839,7 +1839,7 @@ Device file下的block device file和character device file
 
 > 这个b就是block device file
 
-#### File Access
+#### 7.2.3 File Access
 
 * Sequential access -> 只能顺序访问
 
@@ -1849,7 +1849,7 @@ Device file下的block device file和character device file
 
   很常见，比如用c随便开一个文件，可以用fseek调转，随便跳
 
-#### File Attributes
+#### 7.2.4 File Attributes
 
 文件的属性和文件本身不会存在一起，分开存
 
@@ -1857,7 +1857,7 @@ Device file下的block device file和character device file
 
 <img src="img/fa.png" alt="img" style="zoom:67%;" />
 
-#### File Operations
+#### 7.2.5 File Operations
 
 Manipulate(操作) files in program: Using system call
 
@@ -1916,7 +1916,7 @@ int main(int argc, char*argv[])
 
 > **Exercise: 把这个代码在自己的机子上转一下**
 
-#### File Structure
+#### 7.2.6 File Structure
 
 Three kinds of file's logical structure(**这是每一个文件内部的结构，不是文件和文件之间的关系结构!**)
 
@@ -1948,7 +1948,7 @@ Three kinds of file's logical structure(**这是每一个文件内部的结构�
 
 > **这三种是逻辑结构，不是在磁盘上存的物理结构**
 
-### Directory
+### 7.3 Directory
 
 上面看到了那么多文件，文件属性，那么怎么组织他们？
 
@@ -1960,7 +1960,7 @@ Three kinds of file's logical structure(**这是每一个文件内部的结构�
 
 * Classify
 
-#### Single-Level Directory
+#### 7.3.1 Single-Level Directory
 
 <img src="img/sld.png" alt="img" style="zoom:50%;" />
 
@@ -1976,13 +1976,13 @@ Problems of Single-Level Directory
 
 * **都放一个目录里，不同的用户可能会起一样的名字**
 
-#### Double-Level Directory
+#### 7.3.2 Double-Level Directory
 
 <img src="img/dld.png" alt="img" style="zoom:50%;" />
 
 * 每个用户一个文件夹
 
-#### Hierarchical Directory
+#### 7.3.3 Hierarchical Directory
 
 <img src="img/hd.png" alt="img" style="zoom:50%;" />
 
@@ -1996,7 +1996,7 @@ Problems of Single-Level Directory
 >
 > * MVC: Model, View, Control
 
-#### Path Names
+#### 7.3.4 Path Names
 
 * Absolute path name: start from '/'
 * Relative path name: start from '.' or '..'
@@ -2066,9 +2066,9 @@ ln -s s.c sln.c
 
 <img src="img/sln.png" alt="img" style="zoom:80%;" />
 
-### File System Implementation
+### 7.4 File System Implementation
 
-#### Files Implementation
+#### 7.4.1 Files Implementation
 
 How do we implement file?
 
@@ -2084,7 +2084,7 @@ How do we implement file?
 >
 > * ~~可能是上面提到的系统调用，按照块来可以少进行用户态和内核态的切换？~~
 
-##### Physical Block Allocation
+##### 7.4.1.1 Physical Block Allocation
 
 * Raw version: Continuous Allocation
 
@@ -2093,7 +2093,7 @@ How do we implement file?
   > * 在特定情况下(类似机械硬盘)，读写效率比较高，机械臂来回动的时候，由于是连续的，移动少，**不用来回寻道**
   > * 不停生成删除文件，会形成大大小小的空洞，要消除空洞，就要把文件往前移一移(参考<a href = "#downward">downward</a>操作)
 
-##### Block Tracking
+##### 7.4.1.2 Block Tracking
 
 按照上面那种方式存完了，只是表面上感觉着是顺序存的，**实际上还是分散在磁盘中，只不过是用了某种方式让用户从表面上看起来是顺序存的**。用什么方式呢？Maybe Link list
 
@@ -2101,7 +2101,7 @@ How do we implement file?
 
 > * 这么存，随机访问很慢，每次都要从表头一个一个搜索，改进 -> FAT
 
-##### FAT(File Allocation Table)
+##### 7.4.1.3 FAT(File Allocation Table)
 
 <img src="img/fat.png" alt="img" style="zoom:50%;" />
 
@@ -2110,7 +2110,7 @@ How do we implement file?
 > * (考点)**FAT除了Tracking，还有别的功能：那些空的位置，代表没人用的Block，所以也记录了当前磁盘上的空闲块**
 > * Using the table of Fig. 4-12, we can **start with block 4 and follow the chain all the way to the end**. The same can be done starting with block 6. Both chains are terminated with a special marker (e.g.,−1) that is not a valid block number. 
 
-##### Inode
+##### 7.4.1.4 Inode
 
 > Inodes contain the following information:
 >
@@ -2142,7 +2142,7 @@ How do we implement file?
 
 > * *Inode也是在磁盘上存的，那Inode的空间是谁给分配的？*
 
-#### Directory Implementation
+#### 7.4.2 Directory Implementation
 
 * **目录文件，不是文件夹！**
 
@@ -2157,7 +2157,7 @@ How do we implement file?
 
 在已有的<a href = "#byteseq">顺序集合</a>的基础上，怎么实现目录文件？
 
-##### Fixed size
+##### 7.4 2.1 Fixed size
 
 <img src="img/fxsize.png" alt="img" style="zoom:50%;" />
 
@@ -2167,7 +2167,7 @@ How do we implement file?
 > * attributes的位置不一定，Inode中不是也有文件属性吗，所以不一定存在哪儿，可能在目录项，也可能在Inode
 > * 问题：文件名很长咋办？比如电脑上会有这种`~.`开头的文件，那个就有可能是名字太长了，按照一种规则给截短了
 
-##### Improved
+##### 7.4.2.2 Improved
 
 <img src="img/ipr.png" alt="img" style="zoom:67%;" />
 
@@ -2175,7 +2175,7 @@ How do we implement file?
 > * 阴影表示**字节对齐**
 > * a有个问题，删掉一个目录项会有空洞，采用b，**把固定长度的东西放在前面**，移动的空间会少一些，不用移attributes之类的
 
-#### Linked File Implementation
+#### 7.4.3 Linked File Implementation
 
 在上面的<a href = "#linkex">An Link Example</a>中，s.c和sln.c是一个文件吗？
 
@@ -2250,7 +2250,7 @@ How do we implement file?
 >
 > A symbolic link *is* a file and it's distinct from its target. This means that it has its own inode. It used to be handled just like a regular file: the target path was stored in a data block. But now, for efficiency reasons in recent *ext* filesystems, paths shorter than 60 bytes long are stored within the inode itself (using the fields which would normally be used to store the pointers to data blocks).
 
-#### File System Layout
+#### 7.4.4 File System Layout
 
 <img src="img/fsl.png" alt="img" style="zoom:60%;" />
 
@@ -2261,7 +2261,7 @@ How do we implement file?
 * Super Block里放一些文件系统的关键参数，比如前面说的Physical Block，那一个块有多大呢？Inode的区域(就是后面那块)的起始地址在哪？或者这是啥文件系统呢？是ext3，ext4，还是ntfs之类的？
 * Free space management，MM里讲过 ，是bitmap或者是link list
 
-#### Log-Structed File System
+#### 7.4.5 Log-Structed File System
 
 把文件系统当做一个日志文件，只往里追加着写
 
@@ -2282,11 +2282,11 @@ How do we implement file?
 
 > SSD的NAND芯片，在写入时一定要先擦除操作，而且对于同一个单元，频繁擦除，寿命不长，所以采用Log方式追加着写，**能做到写均衡**
 
-#### Journaling File System
+#### 7.4.6 Journaling File System
 
 * Log啥都记日志，Journaling仅记录**关键数据更改的日志**，比如Inode
 
-#### Virtual File System
+#### 7.4.7 Virtual File System
 
 <img src="img/pavs.png" alt="img" style="zoom:60%;" />
 
@@ -2294,9 +2294,9 @@ How do we implement file?
 
 比如你电脑是NTFS的，为啥还能识别FAT32硬盘呢？就是因为虚拟文件系统，将各个不同的文件系统统一抽象成一个接口，变成类似c++的虚函数，java的抽象类中不加final的函数，这样不管啥系统，都调用这个父类的函数，就直接向下转型为自己的函数执行了，也就是多态，实现了多种文件系统的共存，移植方便
 
-### File System Management & Optimization
+### 7.5 File System Management & Optimization
 
-#### Disk Space Management
+#### 7.5.1 Disk Space Management
 
 一个磁盘块(disk block)多大合适？
 
@@ -2331,7 +2331,7 @@ How do we implement file?
   >
   > *问题：那个表里是Open file table里的QuotaPointer，那么是每一个用户对应一张Quota table，还是每一个文件都有一张Quota table呢？我感觉是每个用户一张，然后不同的Open file table中正在打开的文件，每个里面的Quota pointer，只要User是那个User，那pointer指向的就是同一张Quota table*
 
-#### File System Reliability
+#### 7.5.2 File System Reliability
 
 增量式备份(incremental dump)：当修改文件时，不拷贝整个文件系统，只拷贝修改过的文件
 
@@ -2357,7 +2357,7 @@ How do we implement file?
 
   > 整盘备份，并且是第一次，Logical比Physical要慢，因为Logical基于API，需要打开文件，对每个文件要建立Inode，更耗时，Physical最多给硬盘整个建立一个Inode，也不用遍历树型目录
 
-#### File System Consistency
+#### 7.5.3 File System Consistency
 
 要写一个文件，建立Inode，但数据还没写，断电了；或者分配block的时候，正要改链表，断电了，咋办？
 
@@ -2374,7 +2374,7 @@ How do we implement file?
 > * Inode节点本身也含有本文件的引用数，据此也可以建立一张表
 > * 上述两张表进行比对
 
-#### File System Performance
+#### 7.5.4 File System Performance
 
 **Cache**
 
@@ -2407,7 +2407,7 @@ How do we implement file?
 
 
 
-#### Defragmenting
+#### 7.5.5 Defragmenting
 
 > * 在初始安装操作系统后,从磁盘的开始位置,ー个接ー个地连续安装了程序与文件。所有的空闲磁盘空间放在ー个单独的、与被安装的文件邻近的单元里。但随着时间的流逝,文件被不断地创建与删除,于是磁盘会产生很多碎片,文件与空穴到处都是。结果是,当创建一个新文件时,它使用的块会散布在
 >   整个磁盘上,造成性能的降低。
@@ -2416,9 +2416,9 @@ How do we implement file?
 > * 有些文件不能被移动,包括页文件、休眠文件以及日志,因为移动这些文件所需的管理成本要大于移动它们所获得的收益。在ー些系统中,这些文件是固定大小的连续的区域,因此它们不需要进行碎片整理。这类文件缺乏灵活性会造成一些问题,ー种情况是,它们恰好在分区的末端附近并且用户想减小分区的大小。解决这种问题的唯一的方法是把它们ー起删除,改变分区的大小,然后再重新建立它们。
 > * Linux文件系统（特别是ext2和6xt3） 由于其选择磁盘块的方式,在磁盘碎片整理上一般不会遭受像Windows那样的困难,因此很少需要手动的磁盘碎片整理。而且,固态硬盘并不受磁盘碎片的影响。事实上,在固态硬盘上做磁盘碎片整理反倒是多此ー举,不仅没有提髙性能,反而磨损了固态硬盘。所以碎片整理只会缩短固态硬盘的寿命。
 
-### Example File Systems
+### 7.6 Example File Systems
 
-#### ISO 9660
+#### 7.6.1 ISO 9660
 
 <img src="img/iso.png" alt="img" style="zoom:60%;" />
 
@@ -2429,7 +2429,7 @@ How do we implement file?
 > * After entry, it comes the starting block of the file itself. Files are stored as contiguous runs of blocks, so a file’s location is completely specified by the starting block and the size, which is contained in the next field.
 > * 问题：文件名15个byte，太长了要用别的格式
 
-#### MS-DOS
+#### 7.6.2 MS-DOS
 
 <img src="img/msdos.png" alt="img" style="zoom:67%;" />
 
@@ -2438,7 +2438,7 @@ How do we implement file?
 > * Time2个字节16bit，一共2^16 = 65536个状态，但一天是86400秒，因此可能会有2s左右误差
 > * First block number: 和FAT搭配，从第一块开始遍历FAT
 
-#### UNIX V7
+#### 7.6.3 UNIX V7
 
 <img src="img/unixv7.png" alt="img" style="zoom:67%;" />
 
@@ -2457,9 +2457,9 @@ How do we implement file?
 
 <img src="img/usc.png" alt="img" style="zoom:67%;" />
 
-## I/O
+## 8. I/O
 
-### Principles of I/O Hardware
+### 8.1 Principles of I/O Hardware
 
 对于操作系统开发者，关心硬件要关心到什么程度？-> API
 
@@ -2575,7 +2575,7 @@ I/O设备和它们提供的API也是有地址的，那怎么知道我访问的�
 
 > CPU执行指令通常要取地址，解码，执行，写回，这样如果能并行的话，可以让第一条指令在执行的时候，第二条指令在解码，第三条指令刚取完地址，这样可以提高吞吐量。那么，如果一个中断处理程序这时候要被执行，那这三条指令怎么办？如果把没有正在执行的指令立即清空(**不能清空正在执行的指令，否则会有严重后果**)并加载中断程序，就叫做Precise Interrupt。好处是响应时间短，坏处是那些本来要执行的指令被浪费了；如果只是关上大门，等门里的指令都执行完，CPU闲下来之后再加载中断程序，这就叫做Imprecese Interrupt。好处是指令没有被浪费，坏处是中断响应时间长
 
-### Principles of I/O Software Layers
+### 8.2 Principles of I/O Software Layers
 
 I/O软件设计采用分层架构
 
@@ -2743,7 +2743,7 @@ return_from_interrupt();
 
   硬盘能共享，磁带不能，很专一
 
-### Hardwares
+### 8.3 Hardwares
 
 **Disks**
 
@@ -2920,7 +2920,7 @@ long CALLBACK WndProc(HWND hwnd, UINT message, UINT wParam, long lParam){
 
 *其他省电方式*
 
-## Deadlock
+## 9. Deadlock
 
 **Definition**
 
@@ -2932,7 +2932,7 @@ long CALLBACK WndProc(HWND hwnd, UINT message, UINT wParam, long lParam){
 
 > 因为对资源的竞争才会产生死锁
 
-### Four Conditions
+### 9.1 Four Conditions
 
 Deadlock的4个必要条件(如果出现了Deadlock的话，那么)
 
@@ -2968,13 +2968,13 @@ Deadlock的4个必要条件(如果出现了Deadlock的话，那么)
 * 连打劫的想法还没产生，对面直接交钱，不多bb
 * **拿上面那张图说明，c占着u，想要t；d占着t，想要u，照理来说，c和d都不允许对方先拿自己的东西，所以会产生死锁，但是有可能，t和u是个数组，而c只占有u的前几个，而d要访问u的后几个，这样就不会产生死锁了。也就是，如果每个资源是有多个的时候，就不一定**
 
-### Deadlock Handling
+### 9.2 Deadlock Handling
 
-#### Ostrich Algorithm
+#### 9.2.1 Ostrich Algorithm
 
 不管，爱咋咋地。但是也有合理性，当今的UNIX和Windows就是这样，不管上层应用是否会产生死锁。因为管理成本太高太高了
 
-#### Detect and Recover
+#### 9.2.2 Detect and Recover
 
 **每种资源有一个**
 
@@ -3029,7 +3029,7 @@ Deadlock的4个必要条件(如果出现了Deadlock的话，那么)
 
   弄死，资源自然释放
 
-#### Avoidance
+#### 9.2.3 Avoidance
 
 **Resource trajectories**
 
@@ -3071,7 +3071,7 @@ Deadlock的4个必要条件(如果出现了Deadlock的话，那么)
 * 然后2121能满足A，也能满足E，但是看到E占有的资源很少，先不给他，给A(其实给E也行，不过做题只需要试出一个Safe就成功，所以先A)
 * 给A后，A变成了5132，然后再B，C，E。。。发现是Safe
 
-#### Prevention
+#### 9.2.4 Prevention
 
 * Attacking the **Mutual Exclusion** Condition
 
@@ -3128,7 +3128,7 @@ Deadlock的4个必要条件(如果出现了Deadlock的话，那么)
   > * Normally ordered resources
   > * A resource graph
 
-#### Summary
+#### 9.2.5 Summary
 
 **要考的：**
 
@@ -3149,7 +3149,7 @@ Deadlock的4个必要条件(如果出现了Deadlock的话，那么)
 
 多处理器用busywaiting 特别设计
 
-## Multiprocessor
+## 10. Multiprocessor
 
 <img src="img/mp.png" alt="img" style="zoom:67%;" />
 
@@ -3171,7 +3171,7 @@ Deadlock的4个必要条件(如果出现了Deadlock的话，那么)
 
 **NUMA**: 不一样(b, c)
 
-## Security
+## 11. Security
 
 | Goal                         | Threat                    |
 | ---------------------------- | ------------------------- |
