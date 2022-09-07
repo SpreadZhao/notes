@@ -154,6 +154,8 @@ Data-manipulation language(DML): 数据操作语言，就是对数据库进行**
 
 ## 2. Relational Model
 
+### 2.1 Concepts
+
 Relation表示关系，关系的模型其实就是一个表格。比如下面的这个
 
 <img src="img/rm.png" alt="img" style="zoom:43%;" />
@@ -166,7 +168,7 @@ Relation表示关系，关系的模型其实就是一个表格。比如下面的
 
 如果要是来了一个新老师，还没确定他是什么学院的，也不确定工资是多少，只知道ID和姓名，那么这个时候我们怎么赋值呢？我们允许属性有一个特殊的值叫做**null**。
 
-### 2.1 Relational Algebra
+### 2.2 Relational Algebra
 
 #### 2.1.1 Relation Schema and Instance
 
@@ -178,22 +180,221 @@ Relation表示关系，关系的模型其实就是一个表格。比如下面的
 $$
 department(dept\_name,\ building,\ budget)
 $$
-这个schema就叫做**Relation Schema，记作R**。我们能发现，R其实就是所有的属性构成的集合而已。那么，我们就让属性中的一部分叫做**键(Key)，记作K**。也就是说$K \subseteq R$。
+这个schema就叫做**Relation Schema，记作R**。我们能发现，**R其实就是所有的属性构成的集合而已**。那么，我们就让属性中的一部分叫做**键(Key)，记作K**。也就是说$K \subseteq R$。
 
 上面例子中的`dept_name`，我们能发现，在这个relation中，只要`dept_name`确定了，我们就能确定唯一的一行。像这样的Key，我们叫它**superkey**。又或者上面老师的例子中，`ID`就可以是一个superkey，而{`ID`, `name`}也可以是一个superkey。但是`name`自己就不是一个superkey了，因为老师可能有重名。这里要注意的是，**Key是一个集合而不是单独的属性**，只不过我们日常生活中Key总是单元素的集合罢了。
 
 那么在这些superkey中，我们总要选合适的。所以我们选择**元素个数最少的集合**(基本上都是只有1个元素的)，将它叫做**candidate key**。比如各种网络游戏，会有千千万万玩家。在刚进入游戏的时候，会要求每个玩家起名字，并且不能重名。那么很显然这个`name`就可以成为candidate key；另外，我们还给每个玩家定义了一个`user_id`(因为玩家起的名字通常千奇百怪，尽管没有重名但是管理起来依然很复杂)，也要求所有的`user_id`不能重复。很显然`user_id`也可以成为candidate key。
 
-在上面游戏的例子中，`user_id`比起`name`显然更加适合搜索，因为`user_id`是程序有秩序的赋予而`name`是玩家起的各种千奇百怪的名字。所以我们将`user_id`作为**primary key**。
+在上面游戏的例子中，`user_id`比起`name`显然更加适合搜索，因为`user_id`是程序有秩序的赋予而`name`是玩家起的各种千奇百怪的名字。所以我们将`user_id`作为**primary key**。需要注意的是，**primary key可以不止有一个，可以同时有很多**。
 
 现在那之前说的两张表来：
 
 <img src="img/rm.png" alt="img" style="zoom: 50%;" />|<img src="img/dr.png" alt="img" style="zoom: 50%;" />
 
-在右边的relation中，`dept_name`显然是primary key；而在左边的表中也出现了`dept_name`。如果这俩表是在同一个数据库系统中的，那么我们就说左边的这个`dept_name`是一个**foreign key**，它来自右边的表。这玩意儿有什么用呢？我们来想想：假设我们要插入一个老师，但是惊讶的发现它是电竞学院的，那对不起，肯定是插入失败，因为我们学校根本没有电竞学院。那么我们是怎么有底气说出这话的呢？靠的就是foreign key。我们`dept_name`的**取值**都是来自于其它relation中的primary key，是一定真实存在的。所以我们`dept_name`的值域已经被限制的死死的了，因此**我们只能插入学院是右边那张表里存在的东西**。这种方式也是给我们的值域增加了一种约束。因此我们有时候也把外键称为foreign key constraint。
+在右边的relation中，`dept_name`显然是primary key；而在左边的表中也出现了`dept_name`。如果这俩表是在同一个数据库系统中的，那么我们就说左边的这个`dept_name`是一个**foreign key**，它来自右边的表。这玩意儿有什么用呢？我们来想想：假设我们要插入一个老师，但是惊讶的发现它是电竞学院的，那对不起，肯定是插入失败，因为我们学校根本没有电竞学院。那么我们是怎么有底气说出这话的呢？靠的就是foreign key。我们`dept_name`的**取值**都是来自于其它relation中的primary key，是一定真实存在的。所以我们`dept_name`的值域已经被限制的死死的了，因此**我们只能插入学院是右边那张表里存在的东西**。这种方式也是给我们的值域增加了一种约束。因此我们有时候也把外键称为**foreign key constraint**。
 
 **对于一个学校的教务系统，我们就可以画出这样一张表。**
 
 ![img](img/sd.png)
 
 > 这里的箭头表示被引用的关系。比如takes中的ID指向了student里的ID，表示了takes中的ID是一个foreign key，它来自student。
+>
+> 下划线表示primary key。比如takes(选课) relation中，学生的ID，课程的id，上课节数的id，学期和年份共同作为选课的主键。
+
+#### 2.1.2 Relational-algebra Operations
+
+##### 2.1.2.1 Select
+
+表达式看着很玄乎，其实简单的不得了。我们还是拿instructor relation来举例子。
+
+<img src="img/rm.png" alt="img" style="zoom: 50%;" />
+
+我们如果想选出所有物理学院的老师，我们很容易写出结果：
+
+<img src="img/select.png" alt="img" style="zoom:43%;" />
+
+那么想想我们整个操作的过程：**我们对一个relation进行了操作，这个操作叫做select，同时得到了一个结果，这个结果也是个relation，而这个结果是原来的relation的一部分**。这样的过程就是进行了选择的过程。我们可以将这个**得到的结果relation**记作：
+$$
+\sigma_{dept\_name="Physics"}(instructor)
+$$
+那么很显然可以总结：$\sigma(r)$就是对r这个relation进行选择操作，而“怎么选”就写在下标里。另外，我们还能发现，**select操作只改变了tuple的个数，并没有改变attribute的个数**。
+
+那么如果不是只按照一个标准选怎么办？再看一个例子。
+
+<img src="img/select2.png" alt="img" style="zoom:43%;" />
+
+如果这个是relation r，那么问：$\sigma_{A=B\ \and \ D>5}(r)$是多少？
+
+一看就能看明白，是让我们找：A=B并且D>5的tuple。那么也很容易写出结果：
+
+<img src="img/select3.png" alt="img" style="zoom:43%;" />
+
+##### 2.1.2.2 Project
+
+这里Project译为“投影”。和select相反，它不是横着筛选，而是竖着筛选。还是instructor的例子，如果我们不要`dept_name`，只要剩下三个属性，那么就能得到这样一个relation：
+
+<img src="img/project.png" alt="img" style="zoom:43%;" />
+
+那么我们也能写出这个结果：
+$$
+\Pi_{ID,\ name,\ salary}(instructor)
+$$
+**注意另一种情况：**
+
+<img src="img/project2.png" alt="img" style="zoom:43%;" />
+
+如果我们要写出$\Pi_{A,\ C}(r)$，会发现：
+
+<img src="img/project3.png" alt="img" style="zoom:43%;" />
+
+**有两行是重复的，因为这里我们不要的B其实是superkey。**那么我们得到的这个就不是最后的结果，**还要删除所有重复的tuple才行**。
+
+<img src="img/project4.png" alt="img" style="zoom:43%;" />
+
+##### 2.1.2.3 Union
+
+前面两个操作都是对单个的relation，接下来就是对多个relation了。首先是“并”，也就是两个relation并起来形成一个新的relation。
+
+<img src="img/union.png" alt="img" style="zoom:43%;" />
+
+那么我们很容易能写出$r\cup s$：
+
+<img src="img/union2.png" alt="img" style="zoom:43%;" />
+
+需要注意的是，这里只写了4条而不是5条，是因为$\alpha\ 2$这个数据在两个relation中都有，所以还要**去重**。接下来再看一个复杂一点的例子。
+
+<img src="img/union3.png" alt="img" style="zoom:43%;" />
+
+假设这个是section relation。那么我们如果想要找出在Fall 2017**或者**在Spring 2018开设的**课的课程id**，应该怎么计算?一步步来：
+
+* 选出所有Fall 2017的tuple。$\longrightarrow select$
+
+* 选出所有Spring 2018的tuple。$\longrightarrow select$
+
+* 分别将两个结果relation只选出`course_id`属性。$\longrightarrow project \times 2$
+
+  *Fall 2017:*
+
+  * *CS-101*
+  * *CS-347*
+  * *PHY-101*
+
+  *Spring 2018:*
+
+  * *CS-101*
+  * *CS-315*
+  * *CS-319*
+  * ***CS-319***
+  * *FIN-201*
+  * *HIS-351*
+  * *MU-199*
+
+* 将两个选完的结果并起来。$\longrightarrow union$
+
+其中，后面的两步是可以交换的。也就是说，可以先并起来再按着`course_id`去选也可以。
+
+那么这整个过程的结果表达式可以写成：
+$$
+\Pi_{course\_id}(\sigma_{semester="Fall"\ \and\ year=2017}(section))\cup\Pi_{course\_id}(\sigma_{semester="Spring"\ \and\ year=2018}(section))
+$$
+最后的结果就是：
+
+<img src="img/union4.png" alt="img" style="zoom:43%;" />
+
+**这里依然要注意，CS-101和CS-319出现了2次，所以要去重**。
+
+##### 2.1.2.4 Intersection
+
+和上面几乎是一样的，所以这里不多说了。还是上面的例子，如果要计算：
+$$
+\Pi_{course\_id}(\sigma_{semester="Fall"\ \and\ year=2017}(section))\cap\Pi_{course\_id}(\sigma_{semester="Spring"\ \and\ year=2018}(section))
+$$
+结果就是:
+
+<img src="img/in.png" alt="img" style="zoom:43%;" />
+
+##### 2.1.2.5 Set-difference
+
+还是上面的例子，如果我们要找在Fall2017开设而不在Spring 2018开设的课，应该怎么写？使用的就是Set-difference运算符。
+$$
+\Pi_{course\_id}(\sigma_{semester="Fall"\ \and\ year=2017}(section))-\Pi_{course\_id}(\sigma_{semester="Spring"\ \and\ year=2018}(section))
+$$
+其实结果一定是Fall 2017中的一部分。把在Spring 2018里也有份的那个刨掉就行了。
+
+<img src="img/sd1.png" alt="img" style="zoom:50%;" />
+
+##### 2.1.2.6 Cartesian-product
+
+笛卡尔积还是稍微复杂一点的。我们看一个例子。
+
+<img src="img/dk1.png" alt="img" style="zoom:43%;" />
+
+我们把$r\times s$叫做笛卡尔积的结果。先拿出来$\alpha\ 1$，把它和s中的所有tuple都分别拼到一块；然后再拿出$\beta\ 2$做相同的操作。最终得到的relation就是笛卡尔积的结果。
+
+<img src="img/dk2.png" alt="img" style="zoom:43%;" />
+
+之前的操作符都多多少少有重复的问题。那么这个笛卡尔积这么可劲儿乘，肯定是有很大的隐患的。我们还是看之前老师和课的例子。
+
+<img src="img/rm.png" alt="img" style="zoom:50%;" />|<img src="img/teaches.png" alt="img" style="zoom:50%;" />
+
+左边是instructor relation，右边是teaches relation。那么我们能写出一个超级长的笛卡尔积结果：
+
+<img src="img/dk3.png" alt="img" style="zoom:43%;" />
+
+> $instructor \times teaches$
+
+这个结果很显然有一个很大的问题：存在大量的非法数据。它们都是什么？我们来举个例子：比如Srinivasan老师。他的教职ID是10101，而我们看右边的teaches可以了解到，只有前3门课是他交的。而我们在笛卡尔积运算中，**却把所有的课都和他匹配了一遍**。因此除了这三门课以外的所有课都不是他交的，自然也就属于**非法数据**了。所以我们如果想要得到有效的结果，需要对这个笛卡尔积的结果**再进行一次select操作**：选择出`instructor.ID`和`teaches.ID`相等的tuple，也就是**这个课真就是这个老师交的**。
+$$
+\sigma_{instructor.ID=teaches.ID}(instructor \times teaches)
+$$
+<img src="img/dk4.png" alt="img" style="zoom:43%;" />
+
+##### 2.1.2.7 Rename
+
+比如关系r：
+
+<img src="img/rename1.png" alt="img" style="zoom:43%;" />
+
+如果我们要算$r\times r$，会有一个问题：结果的属性应该是4个。但是这俩r的属性都是A和B，那么我们怎么区分结果中的A和B是**前面r的**还是**后面r的**呢？这个时候只需要改个名字就好了：
+$$
+r \times \rho_s(r)
+$$
+这表示把后面的r改名为s。那么结果也就很好区分了：
+
+<img src="img/rename2.png" alt="img" style="zoom: 67%;" />
+
+#### 2.1.3 Exercise
+
+现在我们有一个银行的relation：
+
+| account_number | Branch_name | balance |
+| -------------- | ----------- | ------- |
+| A-101          | Downtown    | 500     |
+| A-215          | Mianus      | 700     |
+| A-102          | Perryridge  | 400     |
+| ...            | ...         | ...     |
+
+现在有一个需求：找出余额最多的银行账户有多少**余额**。很显然，一个号在这里就是一个tuple。所以我们要选tuple，很容易想到select操作。但是我们再仔细想想：之前所有的select操作都是和一个人为的定值比较，比如大于5、小于等于100等等……我们这里的要求是要**余额和余额来比较**，显然单独的选择操作不能满足我们的要求。那么我们又能想到：笛卡尔积正好是构造两个relation的关系，那么我们就可以让这个relation和自己来一个笛卡尔积，就能将所有的balance之间构造好关系了。另外，为了区分，我们将两个relation命名为$A_1和A_2$(这里表格画不下，所以省略了一些东西)：
+
+| A1.number | A1.name    | A1.balance | A2.number | A2.name    | A2.balance |
+| --------- | ---------- | ---------- | --------- | ---------- | ---------- |
+| A-101     | Downtown   | 500        | A-101     | Downtown   | 500        |
+| A-101     | Downtown   | 500        | A-215     | Mianus     | 700        |
+| A-101     | Downtown   | **500**    | A-102     | Perryridge | **400**    |
+| A-215     | Mianus     | **700**    | A-101     | Downtown   | **500**    |
+| A-215     | Mianus     | 700        | A-215     | Mianus     | 700        |
+| A-215     | Mianus     | **700**    | A-102     | Perryridge | **400**    |
+| A-102     | Perryridge | 400        | A-101     | Downtown   | 500        |
+| A-102     | Perryridge | 400        | A-215     | Mianus     | 700        |
+| A-102     | Perryridge | 400        | A-102     | Perryridge | 400        |
+| ...       | ...        | ...        | ...       | ...        | ...        |
+
+看`A1.balance`和`A2.balance`这两列，我们就能发现：所有的比较都已经含在这两列中，那么接下来我们也自然而然就能想到，按照`A1.balance > A2.balance`来进行select操作，就能选出大的：
+$$
+\sigma_{A1.balance>A2.balance}(\rho_{A1}(account) \times \rho_{A2}(account))
+$$
+但是注意看表格中加粗的部分：这三个tuple都满足`A1.balance > A2.balance`，这代表我们一次选择并不能选出最大的balance。我们再想一想我们到底选了个什么：当然，我们最后要筛出A1那一列，因为选择的时候我们是假定A1大的。但是我们在比较的时候，并不是比最大的，而是**只要我比他大，我就入选了**。那么其实我们并不是选了最大的，而是**只是没有选最小的，其他的都选了**。所以我们不妨反着来：将>改成<，这样我们就是只是没有选最大的，然后再用整个集合减去它，就把最大的留了下来，注意别忘了筛选出balance那列，我们要的只是余额而已：
+$$
+\Pi_{balance}(account)-\Pi_{A1.balance}(\sigma_{A1.balance<A2.balance}(\rho_{A1}(account) \times \rho_{A2}(account)))
+$$
