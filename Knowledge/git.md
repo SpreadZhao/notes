@@ -92,3 +92,23 @@
 
 * 如果改地址，那就`git remote set-url <仓库名> <新地址>`
 
+## gitee和github同步仓库，一次提交两次更新
+
+* 首先有一个仓库，然后在另一个上面先import
+
+* 然后在本地的`.git`里加上另一个的url
+
+  ![img](img/newurl.png)
+
+* 这样在`remote -v`的时候就能看到多个地址
+
+  ![img](img/remote.png)
+
+  > 我们能看到github的只支持push操作不支持pull操作
+
+* 然后在修改提交过后就会有两次提交记录在shell中了
+
+  <img src="img/push.png" alt="img" style="zoom:33%;" />
+
+
+
