@@ -364,7 +364,161 @@ $$
 
 <img src="img/rename2.png" alt="img" style="zoom: 67%;" />
 
+##### 2.1.2.8 Join
+
+在之前笛卡尔积的例子中，我们看到了对于两个表之间建立关系，然后再从中进行选择的操作。包括下面的Exercise也有这样的操作。其实这样的操作经常会见到，所以我们不妨直接给他重新命名，叫做**join**。非常形象，就是把两张表合成一张表。比如还是笛卡尔积的老师的例子中，我们得到的结果是：
+$$
+\sigma_{instructor.ID=teaches.ID}(instructor \times teaches)
+$$
+那么我们可以将这个写成连接操作：
+$$
+instructor \bowtie_{instructor.ID=teaches.ID} teaches
+$$
+总结一下，有两张表r和s，如果我们要按照一定的要求$\theta$将它们连接起来(也就是先笛卡尔积，然后按照这个要求来选择)，所得到的结果就是$r \bowtie_\theta s$，即
+$$
+r \bowtie_\theta s=\sigma_\theta(r \times s)
+$$
+~~如果这个条件是**某些属性的等值**(比如上面的`instructor.ID=teaches.ID`)~~，我们可以称这个连接为**自然连接**。但是自然连接有时候也会遇到一些问题。我们看下面一个例子：
+
+<img src="img/join.png" alt="img" style="zoom: 67%;" />
+
+如果我们要给`course`和`prereq`做自然连接的话，会发现一个事情：CS-315和CS-347这两门课的信息被完全抹去了。因为我们一定是用`course.course_id=prereq.course_id`来进行选择，而这两门课是不可能匹配上的，所以它们也自然是要被删除的tuple。这就产生了问题：比如拿CS-315来举例子。这是Robotics课，它有可能根本就没有前置课程，也就是null。这种情况下我们其实是需要这样的信息的，但是自然选择却把它给抹去了。所以我们需要新的方式来保留住这个信息。
+
+**Natural left outer join**
+
+这就是一种方式，叫做**自然左连接**。从上面的叙述能看出来，自然连接就是按照某些条件把两张表拼起来，所以我们可以先试试把两张表拼一拼：
+
+| course_id | title       | dept_name | credits | prereq_id |
+| --------- | ----------- | --------- | ------- | --------- |
+| BIO-301   | Genetics    | Biology   | 4       | BIO-101   |
+| CS-190    | Game Design | Comp.Sci. | 4       | CS-101    |
+|           |             |           |         |           |
+
+拼到这里的时候都是和自然连接一样的(因为两个course_id是重复的，所以删掉了)。但是接下来就出现了问题：本来下一行我们是要删掉的，但是我们却要留下来，所以这里我们采用自然左连接的方式。左就代表以左边的relation为基准，即**一定要留下它的所有信息**。比如我们这个表是这么构建的：
+$$
+(course)\ natural\ left\ outer\ join\ (prereq)
+$$
+那么我们就一定要留下course的所有信息：
+
+| course_id | title       | dept_name | credits | prereq_id |
+| --------- | ----------- | --------- | ------- | --------- |
+| BIO-301   | Genetics    | Biology   | 4       | BIO-101   |
+| CS-190    | Game Design | Comp.Sci. | 4       | CS-101    |
+| CS-315    | Robotics    | Comp.Sci  | 3       | **null**  |
+
+最后如果在另一张表里找不到，就写为null即可。
+
+**Natural right outer join**
+
+举一反三即可，以右边的为基准。还是刚才的例子，如果是这么构建的话：
+$$
+(course)\ natural\ right\ outer\ join\ (prereq)
+$$
+就保留prereq的所有信息即可：
+
+| course_id | title       | dept_name | credits  | prereq_id |
+| --------- | ----------- | --------- | -------- | --------- |
+| BIO-301   | Genetics    | Biology   | 4        | BIO-101   |
+| CS-190    | Game Design | Comp.Sci. | 4        | CS-101    |
+| CS-347    | **null**    | **null**  | **null** | CS-101    |
+
+**Natural full outer join**
+
+既保留左边的，也保留右边的。还是一样的例子：
+
+| course_id | title       | dept_name | credits  | prereq_id |
+| --------- | ----------- | --------- | -------- | --------- |
+| BIO-301   | Genetics    | Biology   | 4        | BIO-101   |
+| CS-190    | Game Design | Comp.Sci. | 4        | CS-101    |
+| CS-315    | Robotics    | Comp.Sci  | 3        | **null**  |
+| CS-347    | **null**    | **null**  | **null** | CS-101    |
+
+其实全外连接就是**先左，再右，最后并**。
+
+**Inner join**
+
+提一嘴就行。其实就是自然连接，只不过它**保留了相等的属性，没有删掉**。
+
+![img](img/join2.png)
+
+##### 2.1.2.9 Division
+
+我们先来看一个复杂的例子。
+
+![img](img/division.png)
+
+> 图里最左边的表少画了一列，应该是customer_name和account_number，这张表叫depositor。
+
+问：Find all customers who have an account at all branches located in Brooklyn city.
+
+首先我们看Brooklyn，它对应的branch有Brighton和Downtown。所以我们的目标就是找到一个customer，**他同时拥有位于这两个branch的账户**。
+
+按着上面的叙述来，第一步就是找出Brooklyn的所有账户：
+$$
+\sigma_{branch\_city="Brooklyn"}(branch)
+$$
+depositor那张表因为只有customer_name是有用的信息，account_number一看就是用来连接的。所以我们直接把depositor和account连接上。
+$$
+depositor \bowtie account
+$$
+然后问题来了。我们需要找的是Brooklyn中的branch，所以比较的重点就是这两张表中的branch_name属性。那么我们要怎么比？我们的目的是找到一个customer_name，他对应的branch_name会有很多个，**而这很多个一定要包括$\sigma_{branch\_city="Brooklyn"}(branch)$里全部的branch_name**。明确了这些，我们开始下面的操作。首先要去除无用的信息。在比较的过程中，我们发现只比较了$depositor \bowtie account$中的`customer_name`和`branch_name`，还有$\sigma_{branch\_city="Brooklyn"}(branch)$中的`branch_name`。所以我们要**分别把两张表做投影，把有用的属性筛出来**：
+$$
+\pi_{customer\_name,\ branch\_name}(depositor \bowtie account)\longrightarrow A1
+$$
+
+$$
+\pi_{branch\_name}(\sigma_{branch\_city="Brooklyn"}(branch))\longrightarrow A2
+$$
+
+最后就是开始寻找：遍历A1中的customer_name，对于每个name，看其对应的**一个或多个**branch_name是否完全包括了A2中所有的branch_name。如果有，那么就将这个name添加到结果的relation中。
+
+上面进行的操作，就叫做**division**。而这道题最终的结果也可以记为：
+$$
+\pi_{customer\_name,\ branch\_name}(depositor \bowtie account) \div \pi_{branch\_name}(\sigma_{branch\_city="Brooklyn"}(branch))
+$$
+然后来说一下division的定义。
+
+我们有两个relation: r和s。
+
+<img src="img/div1.png" alt="img" style="zoom: 67%;" />
+
+被除的是s，而除它的是r。s中有B，而r中有A和B。我们规定，$r \div s$中的属性是**r中的属性中把s的扣掉**。那么在这个例子中，就是AB扣掉B，自然就剩A了。
+
+然后我们要在r中去**按照A来进行遍历**。对于每一个A中的值，我们要看**它对应的所有B是否全部包括了s中的B**，如果包括，就将它添加到结果relation中。这里$\alpha$很显然在遍历1，2行的时候就已经包括了所有的s中的B，所以$\alpha$就是结果relation中的一个。另外经过完整遍历，我们发现$\beta$也满足，所以结果就是：
+
+![img](img/div2.png)
+
+通过这两个例子也能看出，division操作是用来解决relation中的包含关系的。也就是**第一个relation中的哪些tuple具有==包括第二个relation完整信息==的能力**。
+
+**接下来再看一个例子：**
+
+<img src="img/div3.png" alt="img" style="zoom: 67%;" />
+
+这里要计算$r \div s$，还是按照之前的叙述来。首先结果中应该只有ABC三个属性，也就是ABCDE扣掉DE。
+
+然后按着ABC开始逐行遍历，比如第一行$\alpha\ a\ \alpha$，看它对应的DE能不能包括所有的DE。而我们发现这整个表里只有一行是$\alpha\ a\ \alpha$，所以毫无疑问匹配失败。
+
+然后是第二行$\alpha\ a\ \gamma$。它在2，3行正好就全包括了a l和b l，所以这个是结果relation中的一员。
+
+经过所有遍历，我们也很容易写出结果：
+
+![img](img/div4.png)
+
+**还有一种特殊情况，就是两个relation的属性并非完全包括关系。**
+
+![img](img/div5.png)
+
+如果要计算$R \div S$的话，我们首先发现：XY扣YF扣不掉。但是没有关系，我们只需要**能扣多少扣多少**。也就是把Y给扣掉就行了，**所以结果中只有一个X**。
+
+然后还是按着X对R进行逐行遍历。这里只有X1和X2。首先是X1，而整个R中只有这一个组合，所以它肯定不是结果。
+
+然后是X2，发现这里有三个，而也完全包括了S中的Y1和Y2(**这里不需要管F了，它和除法操作无关**)，所以它就是结果。
+
+![img](img/div6.png)
+
 #### 2.1.3 Exercise
+
+##### 2.1.3.1 Ex1
 
 现在我们有一个银行的relation：
 
@@ -398,3 +552,42 @@ $$
 $$
 \Pi_{balance}(account)-\Pi_{A1.balance}(\sigma_{A1.balance<A2.balance}(\rho_{A1}(account) \times \rho_{A2}(account)))
 $$
+
+##### 2.1.3.2 Ex2
+
+现在有两个relation:
+
+![img](img/ex2.png)
+
+问：Find all customers who have at least two deposits in different branch.
+
+首先来分析一下。要求是同一个人，但是要是不同的账户，而且分支还得不一样。总结起来就是customer_name相同，account_number不同，并且branch_name也不同。和上面的Ex1一样涉及到了自己和自己比的操作(**比customer_name和branch_name**)，我们也能想到自然连接。所以先把这两个表连接起来：
+$$
+depositor \bowtie account
+$$
+这里的连接条件很显然，就是account_number相等。连接之后我们就有了一个拥有4个attribute的relation：
+$$
+depositor \bowtie account(customer\_name,\ account\_number,\ branch\_name,\ balance)
+$$
+接下来我们要想一想：这里是自己和自己比的操作，而现在只有这一张表。很显然我们要进行一遍笛卡尔积才可以。所以我们要让这个结果和自己来个笛卡尔积，并且使用不同的命名：
+$$
+\rho_{D1}(depositor \bowtie account)\times\rho_{D2}(depositor \bowtie account)
+$$
+这样我们又得到了一个新的relation，表示$depositor \bowtie account$这个relation里面所有的tuple之间建立的关系。接下来，我们要从中筛选出符合题意的tuple，也就是那三个条件。
+$$
+\sigma_{D1.customer\_name=D2.customer\_name\ \and\ D1.account\_number \neq D2.account\_number\ \and\ D1.branch\_name\neq D2.branch\_name}\\
+(\rho_{D1}(depositor \bowtie account)\times\rho_{D2}(depositor \bowtie account))
+$$
+最后题目要求的是找出customer即可，所以要投影出名字。
+$$
+\pi_{D1.customer\_name}(\\
+\sigma_{D1.customer\_name=D2.customer\_name\ \and\ D1.account\_number \neq D2.account\_number\ \and\ D1.branch\_name\neq D2.branch\_name}\\
+(\rho_{D1}(depositor \bowtie account)\times\rho_{D2}(depositor \bowtie account))\\
+)
+$$
+本题和Ex1很像，只不过最后的比较条件由一个变成了三个。另外，这道题用了两次"笛卡尔积+选择"，而Ex1只用了一次。**这两次一次是为了将两张表和成一张；另一次是在这张合成的表中进行自我比较**。
+
+***剩下的练习题见录播第二集和第三集***
+
+##  3. SQL
+
