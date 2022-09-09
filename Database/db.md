@@ -194,6 +194,8 @@ $$
 
 在右边的relation中，`dept_name`显然是primary key；而在左边的表中也出现了`dept_name`。如果这俩表是在同一个数据库系统中的，那么我们就说左边的这个`dept_name`是一个**foreign key**，它来自右边的表。这玩意儿有什么用呢？我们来想想：假设我们要插入一个老师，但是惊讶的发现它是电竞学院的，那对不起，肯定是插入失败，因为我们学校根本没有电竞学院。那么我们是怎么有底气说出这话的呢？靠的就是foreign key。我们`dept_name`的**取值**都是来自于其它relation中的primary key，是一定真实存在的。所以我们`dept_name`的值域已经被限制的死死的了，因此**我们只能插入学院是右边那张表里存在的东西**。这种方式也是给我们的值域增加了一种约束。因此我们有时候也把外键称为**foreign key constraint**。
 
+***注意：foreign key并不一定是其他表中的primary key，上面的例子中只是一种情况。***
+
 **对于一个学校的教务系统，我们就可以画出这样一张表。**
 
 ![img](img/sd.png)
@@ -590,4 +592,124 @@ $$
 ***剩下的练习题见录播第二集和第三集***
 
 ##  3. SQL
+
+为什么**关系型数据库**那么牛逼？一个是第二章的Relational Algebra，另一个就是SQL。SQL全称**Structured Query Language**，就是结构化查询语言。
+
+### 3.1 DDL
+
+```sql
+create table instructor(
+    ID				char(5),
+    name			varchar(20) not null,	/* name在赋值或者修改的时候不允许变成null */
+    dept_name		varchar(20),
+    salary			numeric(8,2),			/* 浮点数，整数8位小数2位 */
+    primary key(ID),						/* 主键是ID，只能有一个，并且默认not null */
+    
+    /*
+     * 这里表示foreign_key是引用自department表中的外键。
+     * 需要注意的是，这里其实省略了一些东西，完整的表述是：
+     * foreign key(dept_name) references department(dept_name)
+     * 能省略的条件是：要么department中的相应的属性也叫dept_name；
+     * 要么引用的是department中的primary key。
+    */
+    foreign key(dept_name) references department
+);
+```
+
+```sql
+create table takes(
+	ID				varchar(5),
+    course_id		 varchar(8),
+    sec_id			 varchar(8),
+    semester		 varchar(6),
+    year			 numeric(4,0),
+    grade			 varchar(2),
+    
+    primary key(ID, course_id, sec_id, semester, year),		/* 联合主键 */
+    
+    foreign key(ID) references student,	
+    /* 这里是省的写好几句，所以合成一句话 */
+    foreign key(course_id, sec_id, semester, year) references section
+);
+```
+
+```sql
+/*
+	给instructor这个表加一列，属性是sex，值都是char(2)
+	如果表中已经存在tuple，则新加的属性默认是null
+*/
+alter table instructor add sex char(2);
+```
+
+```sql
+/* 删掉salary，不过有些数据库不支持，因为可不能乱删。 */
+alter table instructor drop salary
+```
+
+### 3.2 DML
+
+```sql
+insert 
+```
+
+### 3.3 MySQL
+
+展示所有数据库
+
+```sql
+show databases;
+```
+
+创建数据库
+
+```sql
+create database xidian;
+```
+
+删除数据库
+
+```sql
+drop database xidian;
+```
+
+进入并使用数据库
+
+```sql
+use xidian;
+```
+
+创建表的语句和上面几乎一样的
+
+展示数据库中的表(relations)
+
+```sql
+show tables;
+```
+
+展示表中的属性(schema)
+
+```sql
+describe instructor
+```
+
+展示帮助
+
+```sql
+\h
+```
+
+向表中插入数据
+
+```sql
+insert into instructor (ID, name, dept_name, salary, birthday) values(123, 'SpreadZhao', 'Comp.Sci', 100.22, default);
+```
+
+展示表中的实例(instance)
+
+```sql
+select * from instructor
+/* 星号表示所有列，也可以只选其中几列 */
+```
+
+*注意里面的日期格式，如果自己手打的话要按照这个格式，并写成字符串。*
 
