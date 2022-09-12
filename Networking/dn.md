@@ -1,4 +1,8 @@
-# 计网笔记
+
+
+<h1>计网笔记</h1>
+
+# Part 1: Basic
 
 ## 1. Introduction
 
@@ -384,7 +388,9 @@ OSI: Open Systems Interconnection，是一个模型，由International Organizat
 
 和TCP对比一下就能看出来，它俩唯一的区别就是：把TCP的应用层拆成3个就变成了OSI层。
 
-## 3. Physical Layer
+# Part 2: Physical Layer
+
+## 3. Introduction to Physical Layer
 
 ### 3.1 Data and Signals
 
@@ -486,7 +492,7 @@ $$
 
 ![img](img/ds.png)
 
-a图中有2个电平，能表示1bit；b图中有4个电平，能表示2个比特。以此类推，如果要表示3个bit的话，就需要有2^3^ = 8个不同的状态。**表示n个bit的话，就需要2^n^个bit**。
+a图中有2个电平，能表示1bit；b图中有4个电平，能表示2个比特。以此类推，如果要表示3个bit的话，就需要有2^3^ = 8个不同的状态。**表示n个bit的话，就需要2^n^个level**。
 
 #### 3.3.1 Bit Rate
 
@@ -605,7 +611,7 @@ $$
 
 ![img](img/tz.png)
 
-为了研究这种噪声，产生了一种概念：**Signal-to-Noise Ratio(SNR)**。也就是信号强度和噪声强度的比值。为了方便计算，这里也引入了分贝。
+为了研究这种噪声，产生了一种概念：**Signal-to-Noise Ratio(SNR)**。也就是信号强度和噪声强度的比值(**这里的强度可以是功率也可以是电压**)。为了方便计算，这里也引入了分贝。
 
 ![img](img/snr.png)
 
@@ -652,4 +658,133 @@ $$
 #### 3.6.1 Bandwidth
 
 之前就已经提过了，带宽就是最大的频率和最小的频率之差，是由赫兹来表示的。另外，也介绍了带宽和比特率的关系。带宽越宽，比特率通常也会更高。**这也就是我们说的谁谁家里是1000M带宽的由来**。
+
+#### 3.6.2 Throughput
+
+带宽越宽，网速越快。但是有时候我们家里明明是千兆甚至万兆带宽，有时候网也会卡的要死。这是为什么呢？其实带宽根本不是衡量**实时**网速的东西。我们的吞吐量才能衡量真实情况下网络的速度。
+
+比如一个10Mbps的带宽，每分钟能传12000帧，每帧平均有10000bit。那么这个网的吞吐量是多少？
+$$
+Throughput=(12000 \times 10000)/60 = 2\ Mbps
+$$
+
+#### 3.6.3 Latency(Delay)
+
+比如直播的时候，从真正的主播那儿开始，到观众收到直播，中间肯定会有延迟。而这个延迟其实是由4部分组成的。
+
+* **Propagation time**
+
+传播时间，就是一个bit从起点到终点经过的时间。
+$$
+Propagation\ time=\frac{Distance(m)}{Propagation\ Speed(m/s)}
+$$
+通常速度是小于真空中光速3 * 10^8^ m/s。
+
+* **Transmission time**
+
+比如第一个bit，它到达目的地后，所用的时间就是上面的Propagation time。但是，这时候信息传完了吗？显然没有！后面还有一串等着呢。所以等最后一个bit到达之后才算结束。那么我们想想，在第一个bit到达目的地时开始计时，在最后一个bit到达目的地后结束计时。这一段时间就是整个消息流过的时间，也就是Transmission time。很显然，计算这个就看**整个消息有多少bit**和我**每秒能传多少bit**，然后再一除。
+$$
+Transmission\ time = \frac{Message\ size}{Bit\ Rate} = \frac{Message\ size(bit)}{Bandwidth(bit/s)}
+$$
+
+* **Queuing time**
+
+比如传到一些交换机或者路由器结点了，同时有好多人一下进来。这个时候肯定要排好队一个一个出，所以有些信息需要排一会儿队。这个时间就叫Queuing time。
+
+* **Processing delay**
+
+还是传到中间结点那儿，就算只有你一个，你也不能马上就走，也要经过一些处理。这部分时间就是Processing delay。
+
+最后，整个的延时就是这几部分的和：
+$$
+Latency=propagation\ time+transmission\ time+queuing\ time+processing\ delay
+$$
+
+#### 3.6.4 Bandwidth-Delay Product
+
+将带宽和时延结合起来才是数据通信中比较重要的概念。带宽是表示一秒能传多少个bit，而时延表示的是我这个管子在传数据的时候的大概的时间。因此**将它俩乘起来就表示我们的这个管子最大能装多少bit**。
+
+![img](img/bdp.png)
+
+## 4. Digital Transmission
+
+### 4.1 Digital-to-Digital Conversion
+
+之前说了，数据和信号都可以是模拟的或者数字的。现在就来说说怎么用数字信号去发送数字数据。
+
+#### 4.1.1 Line Coding
+
+既然要用信号表示数据肯定要从小入手。首先看它们最小的元素：**signal element**和**data element**。它们分别表示信号和数据最小能表示的东西。而**我们用数据和信号的比值r来表示信号承载数据的能力**。通常，data element指的就是1bit。
+
+![img](img/r.png)
+
+然后要衡量传的有多块，我们之前也介绍过，就是bit rate。显然，**bit rate是用来衡量data传的速度的**；而如何去衡量signal传的速度(**signal rate**)呢？用的就是**pulse rate**(也可以叫**modulation rate**或者**baud rate**)。
+
+如果信息要想传的快，归根结底就是**用更少量的信号去传递更多的数据**，这样我们才能最高效地传输。之前说过$\frac{data\ element}{signal\ element}=r$，也就是一个信号能承载r个数据。那么**假设在$t$时间内传输了$x$个信号，我们就能知道，这x个信号承载了$xr$个数据**。我们分别计算一下数据和信号的速度：
+$$
+data\ rate=\frac{xr}{t},\ signal\ rate=\frac{x}{t}
+$$
+因此，我们令$data\ rate=N,\ signal\ rate=S$，会发现N和S有如下关系：
+$$
+\frac{N}{S}=r
+$$
+我们发现，影响它们的因素似乎只有r，也就是一个信号承载几个数据。但是事实却不是如此，在3.3.4.1中就说过，带宽会影响bit rate，而这里并没有和带宽、频率等有关的变量。因此我们这个等式只是一个特殊情况。实际上，平均下来，signal rate和data rate的关系是这样的：
+$$
+S=c \times N \times \frac{1}{r}
+$$
+其中c是case factor，会根据情况改变。通常取值为$[\frac{1}{2},\ 1]$。
+
+带宽实际上就是频率，而频率就是信号的改变。那么信号的改变和signal rate之间有没有什么关系呢？经过实验可以得到，**最小的带宽就是signal rate**。因此我们把这个发现带入上式，可以得到：
+$$
+B_{min}=c \times N \times \frac{1}{r}
+$$
+所以实际上，我们使用的网线、家用宽带的带宽可以是大于等于B~min~的任意一个值。而一旦我们选定了一套配置，这个带宽也就定下来了。这个时候，r和c就会影响N，也就是bit rate的大小。
+
+现在回想一下之前说的电平。3.3.1的时候我们说，如果有两个电平，那么我们**每个电平**能表示1个bit；如果有L个电平，每个电平能表示$log_2L$个bit。将这个结论结合上我们上面的式子，我们能发现：好像这玩意儿就是在说我们式子里的r啊！因为r就是一个信号能携带几个bit。那么我们取一般的情况，也就是1个bit就是一个data element。**那么每个电平能表示$log_2L$个bit，就代表一个信号能携带$log_2L$个data element**：
+$$
+r=log_2L
+$$
+我们将这个结果带回到上式，能惊讶地发现：
+$$
+N=\frac{1}{c} \times B \times log_2L
+$$
+这与我们3.5.1的Nyquist Bit Rate一模一样。因此我们不难发现，其实本式就是Nyquist的一般形式：
+$$
+N_{max}=\frac{1}{c} \times B \times r
+$$
+**基线、基线偏移、直流分量和自同步**
+
+> **Baseline Wandering**
+> In decoding a digital signal, the receiver calculates a running average of the received signal power. This average is called the **baseline**. The incoming signal power is evaluated against this baseline to determine the value of the data element. **A long string of 0s or 1s can cause a drift in the baseline (baseline wandering) and make it difficult for the receiver to decode correctly**. A good line coding scheme needs to prevent baseline wandering.
+> **DC Components**
+> When the voltage level in a digital signal is constant for a while, the spectrum creates **very low frequencies** (results of Fourier analysis). These frequencies around zero, called **DC (direct-current) components**, present problems for a system that cannot pass low frequencies or a system that uses electrical coupling (via a transformer). We can say that DC component means 0/1 parity that can cause base-line wondering. For example, a telephone line cannot pass frequencies below 200 Hz. Also a long-distance link may use one or more transformers to isolate different parts of the line electrically. For these systems, we need a scheme with no DC component.
+> **Self-synchronization(把时钟绑在信号上)**
+> To correctly interpret the signals received from the sender, **the receiver’s bit intervals must correspond exactly to the sender’s bit intervals**. If the receiver clock is faster or slower, the bit intervals are not matched and the receiver might misinterpret the signals. Figure 4.3 shows a situation in which the receiver has a shorter bit duration. The sender sends 10110001, while the receiver receives 110111000011.
+> A **self-synchronizing** digital signal includes timing information in the data being transmitted. This can be achieved if there are transitions in the signal that alert the receiver to the beginning, middle, or end of the pulse. If the receiver’s clock is out of synchronization, these points can reset the clock.
+>
+> ![img](img/los.png)
+
+#### 4.1.2 Line Coding Schemes
+
+现在就是要讲到底我怎么给电平赋予意义，让啥是1，啥是0？下图是总体的策略：
+
+![img](img/lcs.png)
+
+##### 4.1.2.1 Unipolar Scheme
+
+![img](img/us.png)
+
+这种方式功率非常高，所以现在几乎不用了。
+
+##### 4.1.2.2 Polar Schemes
+
+![img](img/ps.png)
+
+在上图中，r=1，带入4.1.1中的式子：$S=c \times N \times \frac{1}{r}$，能计算出S~ave~ = N / 2。
+
+首先来看上面的NRZ-L(Non-Return-to-Zero-**Level**)，这表示这种电平不会回到0电平。低的表示1，高的表示0。这种方式在01交替的时候挺好用，但是如果出现连续的0和1，会产生没有同步信号的情况，如果长时间没有改变的话，会有时钟和信号对不齐的情况。
+
+然后是下面的NRZ-I(Non-Return-to-Zero-**Invert**)，首先不管第一个是啥，都编上0。走到第一个时钟的时候，开始看这个信号是否发生变化：如果变了，下一个bit就是1；如果没变就是0。这种方式，如果是很多个1的话，这个码就会一直变来变去，时钟也很好同步；而如果时长连0的话，其实和NRZ-L的问题一样。
+
+<img src="img/nr.png" alt="img" style="zoom:50%;" />
 
