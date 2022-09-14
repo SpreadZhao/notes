@@ -694,7 +694,7 @@ show tables;
 展示表中的属性(schema)
 
 ```sql
-describe instructor
+describe instructor;
 ```
 
 展示帮助
@@ -712,9 +712,153 @@ insert into instructor (ID, name, dept_name, salary, birthday) values(123, 'Spre
 展示表中的实例(instance)
 
 ```sql
-select * from instructor
+select * from instructor;
 /* 星号表示所有列，也可以只选其中几列 */
 ```
 
 *注意里面的日期格式，如果自己手打的话要按照这个格式，并写成字符串。*
+
+删除表
+
+```sql
+drop table [if exists] instructor;
+```
+
+> 如果有如下需求：
+>
+> ![img](img/my.png)
+>
+> 那么我们可以这样创建：
+>
+> ```sql
+> # 外键还没有写，后面再添加。
+> 
+> mysql> create table grade(
+>     -> id int primary key auto_increment,
+>     -> GradeName varchar(50)
+>     -> );
+> Query OK, 0 rows affected (0.05 sec)
+> 
+> mysql> show tables;
+> +------------------+
+> | Tables_in_xidian |
+> +------------------+
+> | grade            |
+> | instructor       |
+> +------------------+
+> 2 rows in set (0.00 sec)
+> 
+> mysql> describe grade;
+> +-----------+-------------+------+-----+---------+----------------+
+> | Field     | Type        | Null | Key | Default | Extra          |
+> +-----------+-------------+------+-----+---------+----------------+
+> | id        | int         | NO   | PRI | NULL    | auto_increment |
+> | GradeName | varchar(50) | YES  |     | NULL    |                |
+> +-----------+-------------+------+-----+---------+----------------+
+> 2 rows in set (0.00 sec)
+> 
+> mysql> create table subject(
+>     -> SubjectId int primary key auto_increment,
+>     -> SubjectName varchar(50),
+>     -> CourseHours int,
+>     -> GradeId int
+>     -> );
+> Query OK, 0 rows affected (0.02 sec)
+> 
+> mysql> create table score(
+>     -> ScoreId int primary key auto_increment,
+>     -> StuId int not null,
+>     -> SubjectId int not null,
+>     -> ExamDate datetime not null,
+>     -> Score float not null);
+> Query OK, 0 rows affected (0.02 sec)
+> 
+> mysql> show tables
+>     -> ;
+> +------------------+
+> | Tables_in_xidian |
+> +------------------+
+> | grade            |
+> | instructor       |
+> | score            |
+> | subject          |
+> +------------------+
+> 4 rows in set (0.01 sec)
+> ```
+>
+> 然后修改表score，让自增变成10，再插入一个元素看看：
+>
+> ```sql
+> mysql> alter table score auto_increment=10;
+> Query OK, 0 rows affected (0.02 sec)
+> Records: 0  Duplicates: 0  Warnings: 0
+> 
+> mysql> describe score;
+> +-----------+----------+------+-----+---------+----------------+
+> | Field     | Type     | Null | Key | Default | Extra          |
+> +-----------+----------+------+-----+---------+----------------+
+> | ScoreId   | int      | NO   | PRI | NULL    | auto_increment |
+> | StuId     | int      | NO   |     | NULL    |                |
+> | SubjectId | int      | NO   |     | NULL    |                |
+> | ExamDate  | datetime | NO   |     | NULL    |                |
+> | Score     | float    | NO   |     | NULL    |                |
+> +-----------+----------+------+-----+---------+----------------+
+> 5 rows in set (0.00 sec)
+> 
+> mysql> insert into score values(default, 1, 1, now(), 99);
+> Query OK, 1 row affected (0.00 sec)
+> 
+> mysql> select * from score;
+> +---------+-------+-----------+---------------------+-------+
+> | ScoreId | StuId | SubjectId | ExamDate            | Score |
+> +---------+-------+-----------+---------------------+-------+
+> |      10 |     1 |         1 | 2022-09-14 16:01:22 |    99 |
+> +---------+-------+-----------+---------------------+-------+
+> 1 row in set (0.00 sec)
+> ```
+>
+> 把表score名字修改成scores：
+>
+> ```sql
+> mysql> alter table score rename to scores;
+> Query OK, 0 rows affected (0.02 sec)
+> 
+> mysql> show tables;
+> +------------------+
+> | Tables_in_xidian |
+> +------------------+
+> | grade            |
+> | instructor       |
+> | scores           |
+> | subject          |
+> +------------------+
+> 4 rows in set (0.00 sec)
+> ```
+>
+> 给grade表增加一个年级组长Leader：
+>
+> ```sql
+> mysql> alter table grade add Leader varchar(20) default('SpreadZhao');
+> ```
+>
+> 将Leader修改成LeaderId并改变数据类型和默认值：
+>
+> ```sql
+> mysql> alter table grade change Leader LeaderId int;
+> ```
+>
+> 删除LeaderId：
+>
+> ```sql
+> mysql> alter table grade drop LeaderId;
+> ```
+>
+> 单独给score表增加主键(假设原来没有主键)：
+>
+> ```sql
+> alter table score add constraint 'pk_Score' primary key score(ScoreId);
+> # pk_Score是单独起的约束的名字，并不是属性的名字，ScoreId才是。
+> ```
+>
+> 
 
