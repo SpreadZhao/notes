@@ -734,9 +734,9 @@ drop table [if exists] instructor;
 > # 外键还没有写，后面再添加。
 > 
 > mysql> create table grade(
->     -> id int primary key auto_increment,
->     -> GradeName varchar(50)
->     -> );
+>  -> id int primary key auto_increment,
+>  -> GradeName varchar(50)
+>  -> );
 > Query OK, 0 rows affected (0.05 sec)
 > 
 > mysql> show tables;
@@ -758,23 +758,23 @@ drop table [if exists] instructor;
 > 2 rows in set (0.00 sec)
 > 
 > mysql> create table subject(
->     -> SubjectId int primary key auto_increment,
->     -> SubjectName varchar(50),
->     -> CourseHours int,
->     -> GradeId int
->     -> );
+>  -> SubjectId int primary key auto_increment,
+>  -> SubjectName varchar(50),
+>  -> CourseHours int,
+>  -> GradeId int
+>  -> );
 > Query OK, 0 rows affected (0.02 sec)
 > 
 > mysql> create table score(
->     -> ScoreId int primary key auto_increment,
->     -> StuId int not null,
->     -> SubjectId int not null,
->     -> ExamDate datetime not null,
->     -> Score float not null);
+>  -> ScoreId int primary key auto_increment,
+>  -> StuId int not null,
+>  -> SubjectId int not null,
+>  -> ExamDate datetime not null,
+>  -> Score float not null);
 > Query OK, 0 rows affected (0.02 sec)
 > 
 > mysql> show tables
->     -> ;
+>  -> ;
 > +------------------+
 > | Tables_in_xidian |
 > +------------------+
@@ -858,6 +858,24 @@ drop table [if exists] instructor;
 > ```sql
 > alter table score add constraint 'pk_Score' primary key score(ScoreId);
 > # pk_Score是单独起的约束的名字，并不是属性的名字，ScoreId才是。
+> ```
+>
+> 如果要把subject表中的`GradeId`变成外键的话：
+>
+> ```sql
+> mysql> alter table subject add constraint fk_grade foreign key(GradeId) references grade(id);
+> Query OK, 0 rows affected (1.51 sec)
+> Records: 0  Duplicates: 0  Warnings: 0
+> 
+> mysql> describe subject;
+> +-------------+-------------+------+-----+---------+----------------+
+> | Field       | Type        | Null | Key | Default | Extra          |
+> +-------------+-------------+------+-----+---------+----------------+
+> | SubjectId   | int         | NO   | PRI | NULL    | auto_increment |
+> | SubjectName | varchar(50) | YES  |     | NULL    |                |
+> | CourseHours | int         | YES  |     | NULL    |                |
+> | GradeId     | int         | YES  | MUL | NULL    |                |
+> +-------------+-------------+------+-----+---------+----------------+
 > ```
 >
 > 
