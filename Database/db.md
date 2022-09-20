@@ -655,6 +655,125 @@ select [distinct][all] ...from...where...
 select ... as ...
 group by ...having...
 order by...
+
+# 把ID是55555的老师工资翻倍
+update instructor set salary=salary*2 where ID=55555;
+
+# distinct和all的区别
++---------+-------+-----------+---------------------+-------+
+| ScoreId | StuId | SubjectId | ExameDate           | Score |
++---------+-------+-----------+---------------------+-------+
+|      10 |     1 |         1 | 2022-09-19 17:31:33 |    99 |
+|      11 |     2 |         1 | 2022-09-20 19:46:34 |    88 |
++---------+-------+-----------+---------------------+-------+
+2 rows in set (0.00 sec)
+
+mysql> select distinct SubjectId from score;
++-----------+
+| SubjectId |
++-----------+
+|         1 |
++-----------+
+1 row in set (0.02 sec)
+
+mysql> select all SubjectId from score;
++-----------+
+| SubjectId |
++-----------+
+|         1 |
+|         1 |
++-----------+
+
+# 在select中嵌套数学运算
+mysql> select Score/10 from score;
++----------+
+| Score/10 |
++----------+
+|      9.9 |
+|      8.8 |
++----------+
+
+# select from where
+mysql> select Score from score where StuId=1;
++-------+
+| Score |
++-------+
+|    99 |
++-------+
+
+# 使用笛卡尔积
+mysql> select * from grade, score;
++----+-----------+---------+-------+-----------+---------------------+-------+
+| id | GradeName | ScoreId | StuId | SubjectId | ExameDate           | Score |
++----+-----------+---------+-------+-----------+---------------------+-------+
+|  1 | haha      |      10 |     1 |         1 | 2022-09-19 17:31:33 |    99 |
+|  1 | haha      |      11 |     2 |         1 | 2022-09-20 19:46:34 |    88 |
++----+-----------+---------+-------+-----------+---------------------+-------+
+
+# 有如下的relation:
++--------+------------+
+| person | supervisor |
++--------+------------+
+| Bob    | Alice      |
+| Mary   | Susan      |
+| Alice  | David      |
+| David  | Mary       |
++--------+------------+
+# 找到Bob的supervisor:
+mysql> select supervisor
+    -> from emp_super
+    -> where person='Bob';
++------------+
+| supervisor |
++------------+
+| Alice      |
++------------+
+# 找到Bob的supervisor的supervisor(as的使用):
+mysql> select A2.supervisor
+    -> from emp_super as A1, emp_super as A2
+    -> where A1.supervisor=A2.person and A1.person='Bob';
++------------+
+| supervisor |
++------------+
+| David      |
++------------+
+# 找到person里所有带a的人(%的使用，%表示任意长度的字符串)
+mysql> select person
+    -> from emp_super
+    -> where person like '%a%';
++--------+
+| person |
++--------+
+| Mary   |
+| Alice  |
+| David  |
++--------+
+
+# _的使用(_代表任意单个字符)
+mysql> select person
+    -> from emp_super
+    -> where person like '_a___';
++--------+
+| person |
++--------+
+| David  |
++--------+
+
+# 将person升序排列
+mysql> select person
+    -> from emp_super
+    -> order by person;		# 加上desc是降序
++--------+
+| person |
++--------+
+| Alice  |
+| Bob    |
+| David  |
+| Mary   |
++--------+
+
+# 如果order by后面有多个，就是先按第一个排序，然后在第一个相等的情况下按第二个排序
+
 ```
 
 ### 3.3 MySQL
