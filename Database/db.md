@@ -710,6 +710,8 @@ mysql> select * from grade, score;
 |  1 | haha      |      11 |     2 |         1 | 2022-09-20 19:46:34 |    88 |
 +----+-----------+---------+-------+-----------+---------------------+-------+
 
+-----------------------------------------------------------------------------------------
+
 # 有如下的relation:
 +--------+------------+
 | person | supervisor |
@@ -773,6 +775,235 @@ mysql> select person
 +--------+
 
 # 如果order by后面有多个，就是先按第一个排序，然后在第一个相等的情况下按第二个排序
+
+# 数出emp_super有多少行(tuple):
+mysql> select count(*)
+    -> from emp_super;
++----------+
+| count(*) |
++----------+
+|        4 |
++----------+
+
+# 数出emp_super中不重名的person有多少行:
+mysql> select count(distinct person)
+    -> from emp_super;
++------------------------+
+| count(distinct person) |
++------------------------+
+|                      4 |
++------------------------+
+
+-----------------------------------------------------------------------------------------
+
+# 有如下一张表instructor:
++-------+------------+-----------+--------+
+| ID    | name       | dept_name | salary |
++-------+------------+-----------+--------+
+| 10101 | Srinivasan | Comp.Sci  |  65000 |
+| 12121 | Wu         | Finance   |  90000 |
+| 15151 | Mozart     | Music     |  40000 |
+| 22222 | Einstein   | Physics   |  95000 |
+| 32343 | El Said    | History   |  60000 |
+| 33456 | Gold       | Physics   |  87000 |
+| 45565 | Katz       | Comp.Sci  |  75000 |
+| 58583 | Califieri  | History   |  62000 |
+| 76543 | Singh      | Finance   |  80000 |
+| 76766 | Crick      | Biology   |  72000 |
+| 83821 | Brandt     | Comp.Sci  |  92000 |
+| 98345 | Kim        | Elec.Eng. |  80000 |
++-------+------------+-----------+--------+
+# 算出所有学院的平均工资，再升序排序(group by使用):
+mysql> select dept_name, avg(salary) as avg_salary
+    -> from instructor
+    -> group by dept_name
+    -> order by dept_name;
++-----------+-------------------+
+| dept_name | avg_salary        |
++-----------+-------------------+
+| Biology   |             72000 |
+| Comp.Sci  | 77333.33333333333 |
+| Elec.Eng. |             80000 |
+| Finance   |             85000 |
+| History   |             61000 |
+| Music     |             40000 |
+| Physics   |             91000 |
++-----------+-------------------+
+
+# 当你group by之后，再写where来选择会报错，所以要用having:
+mysql> select dept_name, avg(salary)
+    -> from instructor
+    -> group by dept_name
+    -> having avg(salary)>42000;
++-----------+-------------------+
+| dept_name | avg(salary)       |
++-----------+-------------------+
+| Comp.Sci  | 77333.33333333333 |
+| Finance   |             85000 |
+| Physics   |             91000 |
+| History   |             61000 |
+| Biology   |             72000 |
+| Elec.Eng. |             80000 |
++-----------+-------------------+
+# 找出所有比"某个"生物学院老师工资高的老师
+# 也就是只要你比随便一个生物学院老师的工资高，你就被选中了:
+mysql> select distinct T.ID, T.name, T.salary
+    -> from instructor as T, instructor as S
+    -> where T.salary > S.salary and S.dept_name = 'Biology';
++-------+----------+--------+
+| ID    | name     | salary |
++-------+----------+--------+
+| 12121 | Wu       |  90000 |
+| 22222 | Einstein |  95000 |
+| 33456 | Gold     |  87000 |
+| 45565 | Katz     |  75000 |
+| 76543 | Singh    |  80000 |
+| 83821 | Brandt   |  92000 |
+| 98345 | Kim      |  80000 |
++-------+----------+--------+
+# 以上的操作因为很常见，所以有个some关键字专门用来处理"某个"的问题:
+mysql> select distinct ID, name, salary
+    -> from instructor
+    -> where salary > some(select salary
+    -> from instructor
+    -> where dept_name = 'Biology');
++-------+----------+--------+
+| ID    | name     | salary |
++-------+----------+--------+
+| 12121 | Wu       |  90000 |
+| 22222 | Einstein |  95000 |
+| 33456 | Gold     |  87000 |
+| 45565 | Katz     |  75000 |
+| 76543 | Singh    |  80000 |
+| 83821 | Brandt   |  92000 |
+| 98345 | Kim      |  80000 |
++-------+----------+--------+
+# 要是找出比所有金融学院老师工资都高的，那就对应的用all:
+mysql> select distinct ID, name, salary
+    -> from instructor
+    -> where salary > all(select salary
+    ->  from instructor
+    ->  where dept_name = 'Finance');
++-------+----------+--------+
+| ID    | name     | salary |
++-------+----------+--------+
+| 22222 | Einstein |  95000 |
+| 83821 | Brandt   |  92000 |
++-------+----------+--------+
+
+# 找到教师平均工资大于42000的学院(from的子查询)
+mysql> select * from instructor
+    -> order by dept_name;
++-------+------------+-----------+--------+
+| ID    | name       | dept_name | salary |
++-------+------------+-----------+--------+
+| 76766 | Crick      | Biology   |  72000 |
+| 10101 | Srinivasan | Comp.Sci  |  65000 |
+| 45565 | Katz       | Comp.Sci  |  75000 |
+| 83821 | Brandt     | Comp.Sci  |  92000 |
+| 98345 | Kim        | Elec.Eng. |  80000 |
+| 12121 | Wu         | Finance   |  90000 |
+| 76543 | Singh      | Finance   |  80000 |
+| 32343 | El Said    | History   |  60000 |
+| 58583 | Califieri  | History   |  62000 |
+| 15151 | Mozart     | Music     |  40000 |
+| 22222 | Einstein   | Physics   |  95000 |
+| 33456 | Gold       | Physics   |  87000 |
++-------+------------+-----------+--------+
+mysql> select dept_name, avg_salary
+    -> from (select dept_name, avg(salary) as avg_salary
+    -> 		from instructor
+    -> 		group by dept_name) as new
+    -> where avg_salary > 42000;
+    # 这里as new是给派生的表起个名，是mysql的规定
+    # 首先先把所有学院的平均工资算出来，就是派生表干的事
+    # 然后从派生表里把>42000的选出来就行了
+    # 这里用having的写法也是一样的：
+    	# select dept_name, avg(salary) as avg_salary
+		# from instructor
+		# group by dept_name
+		# having avg_salary > 42000;
++-----------+-------------------+
+| dept_name | avg_salary        |
++-----------+-------------------+
+| Comp.Sci  | 77333.33333333333 |
+| Finance   |             85000 |
+| Physics   |             91000 |
+| History   |             61000 |
+| Biology   |             72000 |
+| Elec.Eng. |             80000 |
++-----------+-------------------+
+
+
+-----------------------------------------------------------------------------------------
+
+# 在2.1.2.3中说过选出Fall 2017或者Spring 2018开的课的id，
+# 现在要选出同时在这两个时间开的课：
++-----------+--------+----------+------+----------+-------------+--------------+
+| course_id | sec_id | semester | year | building | room_number | time_slot_id |
++-----------+--------+----------+------+----------+-------------+--------------+
+| BIO-301   |      1 | Summer   | 2017 | Painter  |         514 | B            |
+| BIO-301   |      1 | Summer   | 2018 | Painter  |         514 | A            |
+| CS-101    |      1 | Fall     | 2017 | Packard  |         101 | H            |
+| CS-101    |      1 | Spring   | 2018 | Packard  |         101 | F            |
+| CS-190    |      1 | Spring   | 2017 | Taylor   |        3128 | E            |
+| CS-190    |      2 | Spring   | 2017 | Taylor   |        3128 | A            |
+| CS-315    |      1 | Spring   | 2018 | Watson   |         120 | D            |
+| CS-319    |      1 | Spring   | 2018 | Watson   |         100 | B            |
+| CS-319    |      2 | Spring   | 2018 | Taylor   |        3128 | C            |
+| CS-347    |      1 | Fall     | 2017 | Taylor   |        3128 | A            |
+| EE-181    |      1 | Spring   | 2017 | Taylor   |        3128 | C            |
+| FIN-201   |      1 | Spring   | 2018 | Packard  |         101 | B            |
+| HIS-351   |      1 | Spring   | 2018 | Painter  |         514 | C            |
+| MU-199    |      1 | Spring   | 2018 | Packard  |         101 | D            |
+| PHY-101   |      1 | Fall     | 2017 | Watson   |         100 | A            |
++-----------+--------+----------+------+----------+-------------+--------------+
+# 用sql来写的话就要用到嵌套了:
+mysql> select distinct course_id
+    -> from course
+    -> where semester='Fall' and year = 2017 and
+    -> course_id in (select course_id
+    -> from course
+    -> where semester='Spring' and year=2018);
+    # 先选出在Spring 2018开的课的id的集合，然后判断在2017 Fall开的课的id是否是
+    # Spring 2018中的一员，如果是那就是同时在两个时间开了
++-----------+
+| course_id |
++-----------+
+| CS-101    |
++-----------+
+# 另一种写法，使用了exists关键字:
+mysql> select course_id
+    -> from course as S
+    -> where semester = 'Fall' and year = 2017 and
+    -> exists(select *
+    ->  from course as T
+    ->  where semester = 'Spring' and year = 2018 and S.course_id = T.course_id);
+    # 这种写法很像两层嵌套的循环语句
+    # 所以是首先找Fall 2017的tuple，如果找到了，先别选，继续看exists是否为真
+    # 如果真的这个tuple也同时满足exists里面的条件，那就选中了
+    # 其实上面的写法也是这种嵌套，每次执行到in的时候都要弄出来所有Spring 2018的集合
+    # 然后判断它在不在里面
++-----------+
+| course_id |
++-----------+
+| CS-101    |
++-----------+
+
+# 选出在Fall 2017开但是不在Spring 2018开的课
+mysql> select distinct course_id
+    -> from course
+    -> where semester='Fall' and year = 2017 and
+    -> course_id not in (select course_id
+    -> from course
+    -> where semester='Spring' and year=2018);
++-----------+
+| course_id |
++-----------+
+| CS-347    |
+| PHY-101   |
++-----------+
+
 
 ```
 
@@ -998,4 +1229,78 @@ drop table [if exists] instructor;
 > ```
 >
 > 
+
+## 4. Intermediate SQL
+
+### 4.1 View
+
+封装数据，**view是没有物理存储的，只是告诉你有这么一个东西**。
+
+```sql
+create view faculty as
+	select ID, name, dept_name
+	from instructor;
+```
+
+也可以像用一张表一样用一个view
+
+```sql
+mysql> select name
+    -> from faculty
+    -> where dept_name = 'Biology';
++-------+
+| name  |
++-------+
+| Crick |
++-------+
+```
+
+给每个学院的总工资来个视图
+
+```sql
+create view departments_total_salary(dept_name, total_salary) as
+	select dept_name, sum(salary)
+	from instructor
+	group by dept_name;
+
+mysql> select * from departments_total_salary;
++-----------+--------------+
+| dept_name | total_salary |
++-----------+--------------+
+| Comp.Sci  |       232000 |
+| Finance   |       170000 |
+| Music     |        40000 |
+| Physics   |       182000 |
+| History   |       122000 |
+| Biology   |        72000 |
+| Elec.Eng. |        80000 |
++-----------+--------------+
+```
+
+---
+
+给view增加项的时候会有问题：因为view就是个逻辑的东西，所以实际上在insert view的时候就是给对应的表增加tuple。但是**有些view可能没有包括它拿出来的那个表的主键**，这个时候增加新的项的时候就不好办了，因为那个主键不能为空。所以绝大多数情况是不允许修改view的。
+
+还有另一种问题，比如有这么一个view：
+
+```sql
+create view history_instructors as
+	select * 
+	from instructor
+	where dept_name = 'History';
+```
+
+很简单，就是把所有历史学院的老师封装出来。但是如果我往里插这么一个东西：
+
+```sql
+insert into history_instructors values(25566, 'Brown', 'Biology', 100000)
+```
+
+首先，是能插进去的，因为view的插入要符合这些条件：
+
+* from后面只有一个relation，即只能修改一张表
+* 所有没插的东西都允许为空
+* 对选出来的属性不能有任何函数运算
+
+但是我们插进去是不对的，因为这个老师是生物学院的，所以这种也会产生问题。
 
