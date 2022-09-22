@@ -1304,3 +1304,140 @@ insert into history_instructors values(25566, 'Brown', 'Biology', 100000)
 
 但是我们插进去是不对的，因为这个老师是生物学院的，所以这种也会产生问题。
 
+第三种问题，因为视图是抽象的东西，并没有物理存储，所以你**视图的代码效率也会影响视图的性能**。所以我们在使用抽象视图的时候要注意效率问题。
+
+---
+
+因为view的这种性能的问题，有了**物化视图**的概念，也就是给这个视图一个真正的物理存储，这样在查询视图的时候效率就高得多了。
+
+但是这种物化也会带来问题：比如一个物理学院的老师被调走了，那么很显然要从instructor表里删掉他。但是**他还在视图中存在，这就会导致这种数据的不一致性**。而为了保证一致性，**自动更新视图的工作就交给DBMS**了。
+
+### 4.2 Transaction
+
+一个失败全失败；全成功才成功。比如拿转账来举例子：
+
+```sql
+update ZhangSan - 100;
+update LiSi + 100;
+insert Record;
+```
+
+一个转账操作通常包含这三条信息：给发方减钱，给收方加钱，记录一条转账记录。那么作为事务来讲，在三条语句都成功之后，就要执行一条`commit`语句来表示我的操作都成功了；而如果其中任何一条失败了，我们要执行一条`rollback`语句来**回到我执行这三条语句之前**的状态。
+
+### 4.3  Integrity Constraints
+
+比如最小值，非空之类的都算完整性约束。
+
+```sql
+# 比如课程季只能是春夏秋冬中的一个：
+check(semester in ('Spring', 'Summer', 'Fall', 'Winter'));
+```
+
+### 4.4 SQL Data Types and Schemas
+
+**索引**
+
+我们如果想要找一条数据`ID = 12345`，自然就是：
+
+* 将该表中所有数据读到内存中 -> IO
+* 在内存中逐条做比较，找到ID = 12345的tuple
+
+我们会发现，IO所消耗的时间要远大于在内存中作比较的时间。因此我们为了减小这部分时间，发明了索引。索引其实就相当于书的目录，**先查目录就能够找到我要找的东西的地址是啥了**。
+
+**自定义类型**
+
+```sql
+# 自定义美元类型，12位+2位的浮点数，final表示不能基于这个类型再创建子类
+create type Dollars as numeric(12, 2) final;
+
+create table department(
+	dept_name varchar(20),
+    building varchar(15),
+    budget Dollars				# 使用
+);
+```
+
+**面向对象**
+
+在面向对象的概念出来之后，数据库肯定也要相应地改变：在一个格子中不只是存字符串，数字这种了，也要支持把一个object放进去。而互联网的发展，也诞生了更多的需求：
+
+* blob: binary large object，比如视频对象，一个高清无码4k视频肯定要变成二进制文件存到数据库中，这时候就要对数据库的容量有要求。
+* clob: character large object，比如一个几百万字的小说对象要整个放到一个数据库格子中，那也是对容量的考验。
+
+### 4.4 Authorization
+
+```sql
+grant <privilege list> on <relation name or view name> to <user list>;
+# privilege list: 能干嘛
+# relation name or view name: 对谁干
+# user list: 谁能干
+
+# 同意这仨人对instructor执行select操作
+grant select on instructor to U1, U2, U3;
+
+# 不再同意这仨人对branch执行select操作
+revoke select on branch from U1, U2, U3;
+```
+
+## 5. Advanced SQL
+
+高级语言如何和数据库来交互？我们自然地能想到，如果想要让应用程序和数据库来进行交互，那么肯定要靠DBMS来实现。首先程序将控制信息和数据发送给DBMS，然后把真正的增删改查交给DBMS来实现。**但是如今的数据库通常会有一个数据库客户端，它作为一个小进程就包含在我们的APP里**，而它负责的就是联系DBMS。因此问题就简化成了：我们如何让APP和数据库的客户端进行通信。
+
+通常高级程序语言和数据库进行交流的方式有四种：
+
+* C lib，也就是c语言的库函数
+* 嵌入式sql，缺点是一个牌子的数据库就只能用一种语言，换数据库麻烦
+* ODBC(Open Database Connectivity)，相当于所有数据库的虚函数。java的ODBC就叫做JDBC。缺点是这虚函数只能提供基本操作，对于一些牌子的数据库的特色功能是用不了的，因为要考虑所有的数据库。而且多了一层性能也会下降。
+* ORM(Object Relation Map)，将relation变成对象，这样开发容易很多
+
+我们只讨论中间的两种
+
+### 5.1 Embedded SQL
+
+比如在c语言中嵌入SQL：
+
+```c
+EXEC SQL <select * from ...>;
+```
+
+在java中嵌入SQL：
+
+```java
+# SQL{select * from ...};
+```
+
+我们要了解的一点是，**c语言的编译器是识别不了SQL语句的**。所以为了解决这种问题，厂商提供了一种叫做**预编译器(pre compiler)**的东西。它能将SQL语句变成纯c语句，这样编译器就能够顺利编译执行了。
+
+#### 5.1.1 SQLCA
+
+也就是SQL Communication Area，目前可以理解为用来判断数据库语句执行情况的一个库。它的使用首先需要包含进这个库：
+
+```c
+EXEC SQL INCLUDE sqlca;
+```
+
+sqlca是一个很大的结构体，里面记录的很多都是数据库的状态。其中最常用的就是`sqlca.sqlcode`。它等于0表示执行成功；小于0表示执行失败；大于0表示成功但是有异常(比如没找到)。
+
+```c
+if(sqlca.sqlcode >= 0) printf("Creation Successful\n");
+else printf("Creation failed\n");
+```
+
+#### 5.1.2 Host Language Variables
+
+比如我想给一个学生增加余额，但是增加的这个数是在c语言中的一个变量，那么这个时候就用到主变量了。这种变量可以在c中访问，也可以在sql中访问。
+
+```c
+EXECL SQL update student
+    set balance = balance + :haha
+    where ID = 123;
+```
+
+其中的`:haha`就是宿主变量。通常使用的时机就是：**在sql中要访问sql外部的变量**。宿主变量的声明也是有要求的，我们要把它们夹在两条语句之间：
+
+```c
+EXEC SQL BEGIN DECLARE SECTION;
+	int haha;
+EXEC SQL END DECLARE SECTION;
+```
+
