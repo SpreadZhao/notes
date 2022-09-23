@@ -1158,6 +1158,8 @@ $$
 $$
 B_{min}=(1+d)S
 $$
+上式也可以这么理解，之前我们在4.1.1之所以说最小的带宽就是信号速率，是因为当时d的取值就是0，而如今我们要将这个由于调制解调器和滤波器的**因素分子增量**也算进去，所以最小带宽会比数字信号的最小带宽多了dS。
+
 然后我们再讨论一下f~c~这个东西有什么用。其实它的作用是**携带信息**。因为它正处于中央，所以比较温和，最适合用来携带真正有用的信息。说白了，就是**用这个频率的一个正弦波去造出这整个的一个BASK复杂波**。那么怎么造呢？还记得我们之前4.1.2.1中没人用的波吗？用的就是它。
 
 <img src="img/ib.png" alt="img" style="zoom:67%;" />
@@ -1175,3 +1177,62 @@ $$
 > 这样操作的好处就是我们可以很好地利用这两边的带宽去实现**全双工**。
 >
 > <img src="img/qsg.png" alt="img" style="zoom:67%;" />
+
+#### 5.1.2 Frequency Shift Keying
+
+通过上面的类比我们就能推测出来：ASK是通过两个峰值不一样的波形来区分0和1，那么FSK就一定是通过两个频率不一样的波形来区分0和1。那么如果峰值一样的话，频率不一样时就会产生**相同时间段内的波是稠密还是稀疏**的情况。
+
+![img](img/fsk.png)
+
+这里我们不深入讨论，只看怎么做题：
+
+> We need to send data 3 bits at a time at a bit rate of 3 Mbps. The carrier frequency is 10 MHz. Calculate the number of levels (different frequencies), the baud rate, and the bandwidth. 
+>
+> 三个bit合起来表示一个状态，那么总共有2^3^ = 8种不同的状态，因此level的个数就是8。
+>
+> 然后通过N = 3 Mbps和公式$S=\frac{cN}{r}$能算出来S = 1 Mbaud，因为这里的r = 3就代表一个信号元素携带3个bit一次发出去。
+>
+> 之前我们讨论的都是只有一个连续的带宽，而在FSK中经常会有多个，比如这里就有8个不同的带宽。对于一个大带宽里的小带宽，可以这样计算：
+> $$
+> B_x=(1+d)S
+> $$
+> 而这里的S就是平均信号速率，而本题中d取0(因为上面的公式中c=1)，所以能算出来每一个小带宽都是1 MHz。所以从f~c~ = 10 MHz出发可以大致画出分布：
+>
+> ![img](img/fb.png)
+
+#### 5.1.3 Phase Shift Keying
+
+**Binary PSK**
+
+![img](img/psk.png)
+
+#### 5.1.5 Quadrature Amplitude Modulation
+
+我们怎么把相位和幅度都不同的正弦波区分开呢？使用的是星座图(Constellation Diagram)。
+
+![img](img/cd.png)
+
+* 在星座图中，每一个点表示一个正弦波。
+* 使用**极坐标**的方式来规定幅度和相位两个参数。
+* 到原点的距离表示幅度，和x轴夹角表示相位。
+
+那么我们就可以用星座图来画一下之前说过的ASK和PSK了：
+
+![img](img/cd2.png)
+
+至于QAM的细分，就看图中有几个点，就是几-QAM。
+
+![img](img/qam2.png)
+
+## 6. Bandwidth Utilization
+
+有时候我们的网线之类的，带宽是很富裕的，所以我们要很好地利用它去在一段时间内传更多的信息。
+
+![img](img/bw.png)
+
+其实就是在之前介绍过的channel，而在本章我们要将一条channel拆成多条来实现并发传输。
+
+如何更好地利用带宽？主要有以下的方式：
+
+![img](img/mu.png)
+
