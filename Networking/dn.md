@@ -1166,7 +1166,7 @@ $$
 
 首先用Oscillator发射一个只含有f~c~频率的正弦波，然后再和我们的那个Unipolar一乘就行了。我们能发现，这个方波其实就是一个开关的作用，**在1的时候就把频带信号显示出来；在0的时候就把频带信号完全消掉**。
 
-> We have an available bandwidth of 100 kHz which spans from 200 to 300 kHz. What are the carrier frequency and the bit rate if we modulated our data by using ASK with d = 1?
+> *We have an available bandwidth of 100 kHz which spans from 200 to 300 kHz. What are the carrier frequency and the bit rate if we modulated our data by using ASK with d = 1?*
 >
 > 中点是250，也就是f~c~ = 250 kHz。带宽是100 kHz，而根据B = (1 + d)S能算出来S = 50 kbaud
 >
@@ -1186,7 +1186,7 @@ $$
 
 这里我们不深入讨论，只看怎么做题：
 
-> We need to send data 3 bits at a time at a bit rate of 3 Mbps. The carrier frequency is 10 MHz. Calculate the number of levels (different frequencies), the baud rate, and the bandwidth. 
+> *We need to send data 3 bits at a time at a bit rate of 3 Mbps. The carrier frequency is 10 MHz. Calculate the number of levels (different frequencies), the baud rate, and the bandwidth.* 
 >
 > 三个bit合起来表示一个状态，那么总共有2^3^ = 8种不同的状态，因此level的个数就是8。
 >
@@ -1235,4 +1235,108 @@ $$
 如何更好地利用带宽？主要有以下的方式：
 
 ![img](img/mu.png)
+
+### 6.1 Frequency-Division Multiplexing
+
+之前我们说过，使用模拟信号可以实现全双工，那么使用模拟信号也一定可以实现拆分宽带。
+
+![img](img/cf.png)
+
+图中的3个channel分别位于不同的频段。比如f0-f1，f1-f2，f2-f3。那么使用ASK，FSK，PSK，QAM等技术就能够在这一个大channel里传输多个位于不同频断的信号，并且不会相互干扰了。
+
+![img](img/fdm.png)
+
+在混合的时候，就把这几种不同频段的波给加到一起去传输。
+
+![img](img/fdm2.png)
+
+到达接收方的时候，使用滤波器把自己的那部分频段给过滤出来就好了。
+
+另外有一个问题，就是这些不同频段的波的频率的交界处，因为非常相近，所以可能会产生串扰。那么我们为了更好地减小串扰，同时也为了滤波器能更精准地拆分它们，需要在相邻的两种波之间隔开一段频率。这部分频率叫做**防护频带**。
+
+> *Five channels, each with a 100-kHz bandwidth, are to be multiplexed together. What is the mini mum bandwidth of the link if there is a need for a **guard band** of 10 kHz between the channels to prevent interference?*
+>
+> 我们需要在每两个挨着的波之间加上10 kHz的带宽用来做隔断，那么很容易画出图示：
+>
+> ![img](img/gb.png)
+>
+> ---
+>
+> *Four data channels (digital), each transmitting at 1 Mbps, use a satellite channel of 1 MHz. Design an appropriate configuration, using FDM.*
+>
+> 现在总共只有1 MHz的带宽，而我们要求传的速率是 1 Mbps。我们现在需要规定的，其实是r。因为我们不知道应该用什么方式去传数据，而且怎么表示我们也不知道。现在假设一下，如果我们只让每种状态的波去表示1个bit的话，根据$S=\frac{cN}{r}$能算出来，B = (1+d)S = 1 MHz。而我们一共才只有1 MHz，却要分成4个不同的channel，那么肯定是要用**更小的带宽去传更多的数据**。那么一定是要提高r才行。
+>
+> 既然要分成4个channel，那么我们能得到每个小channel的带宽是250 kHz。还是带回到$S=\frac{cN}{r}$中，能算出r = 4。那么我们就是要让**每种不同的状态去携带4个bit**。之前我们说过，在模拟信号的传输中，不同的状态其实就是ASK，FSK，PSK，QAM这几种。那么我们只需要用这些方法去将信号进行拆分和编码，找出合适的方式就可以了。首要的问题是：有多少种状态呢？既然有4个bit，那么不同的状态就是2^4^ = 16种。所以我们也要找一种能够区分16个不同状态的模拟信号编码方式(**16个不同的正弦波**)。其中一种就是16-QAM。
+>
+> <img src="img/16qam.png" alt="img" style="zoom: 67%;" />
+>
+> *这题的d是默认为0了吗？*
+
+另外FDM可以不只有1层，可以不断往上叠加，叫做**Analog hierarchy**。
+
+![img](img/ah.png)
+
+### 6.2 Wavelength-Division Multiplexing
+
+WDM其实和FDM是一样的，只不过通常用在**光纤缆**中。因为光纤缆中信号的频率非常高，所以使用FDM会有很大的误差。我们转而使用另一个参数——波长来衡量不同的波。
+
+![img](img/wdm.png)
+
+因为光波的参数不像电磁波，它非常难调。我们现在能做到的也只是使用不同的光而已。所以这些不同的光最大的区别其实就是波长。而波长不同的光又恰好不会互相干扰，所以我们将它们加在一起就可以了。
+
+![img](img/wdm2.png)
+
+### 6.3 Time-Division Multiplexing
+
+我们计算机其实特别擅长按时间来实现复用。想想我们的多线程，从外面看确实是多个任务同时在进行，但是实际上是CPU先干一小会儿这个，再干一小会儿那个，而切换得越快，就看起来越像是同时发生的。将这个过程类比到传输中就是：多个信号同时进入，那我先传一个你的，再传一个他的，再传一个你的……
+
+<img src="img/tdm.png" alt="img" style="zoom:80%;" />
+
+将这个过程再深入一下：
+
+<img src="img/tdm2.png" alt="img" style="zoom: 67%;" />
+
+这里的A1A2A3之类的可以是一个bit、一个字符或者一个数据块等等，按着规定来即可。当所有人都轮完一遍之后形成的就是一个Frame，这种复用方式叫做**Synchronous time-division multiplexing**。如果我们设这个大channel的速度是x的话，就能发现，对于每一队单独的数据，它们只是平分这整个速度。所以真正传递某一条数据的速度还要除以队列的总数n。而对于每一个小的数据来讲，它的持续时间也平分了整个的T，变成了$\frac{T}{N}$。
+
+那么这种方式是怎么实现的呢？看图
+
+<img src="img/tdm3.png" alt="img" style="zoom:67%;" />
+
+其中最重要的就是让这两个转的球球同步起来，这样才能正常发送和接收。
+
+既然同步时钟那么重要，如果某个数据是空的该怎么办？TDM的解决思路就是：不管有没有数据，我都把你的那份时间给你。
+
+<img src="img/tdm4.png" alt="img" style="zoom:80%;" />
+
+其他的知识点看图就理解了
+
+![img](img/tdm5.png)
+
+![img](img/tdm6.png)
+
+![img](img/tdm7.png)
+
+![img](img/tdm8.png)
+
+> ![img](img/tdm9.png)
+
+==考试会考的是==，这个分层级的TDM，就像FDM一样：
+
+<img src="img/tdm10.png" alt="img" style="zoom: 80%;" />
+
+![img](img/tdm11.png)
+
+其中T-1这条channel的速度1.544 Mbps是怎么来的呢？我们用24 * 64 kbps得到的是1.536 Mbps，比实际的值要小。这又是为什么？其实就是因为上面提到的**Synchronization Pattern**。下面就来解释一下。
+
+在这个标准中，每轮到一个人，这个人就发一个字节，也就是8bit。而24个人都轮到之后，就是24 * 8 = 192 bit。而在最后还要加一个标识符用来同步时钟，所以现在对于一个Frame，里面就会有193个bit。如果T-1总共能携带8000个frame的话，那么每个Frame都要多传1bit，因此如果我们还是要保证每个分支的速度是64 kbps的话，就要将T-1的速率再提升8000 bps = 8 kbps。因此再加上1.536 Mbps就是最终的结果了。
+
+<img src="img/fs.png" alt="img" style="zoom:50%;" />
+
+*问题：为什么T-1能携带8000个Frame?*
+
+### 6.4 Spread Spectrum
+
+扩频就是把带宽小的变大，这样数据率也就高了。
+
+<img src="img/ss.png" alt="img" style="zoom:67%;" />
 
