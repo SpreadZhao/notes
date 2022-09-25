@@ -1340,3 +1340,79 @@ WDM其实和FDM是一样的，只不过通常用在**光纤缆**中。因为光�
 
 <img src="img/ss.png" alt="img" style="zoom:67%;" />
 
+## 7. Transmission Media
+
+之前提到过，在两个物理层之间还存在着一个Transmission Media，这才是真正传输物理意义上的信息的位置。
+
+<img src="img/tm1.png" alt="img" style="zoom:67%;" />
+
+Transmission Media可以分为有线和无线的，其中又有更多分类。
+
+<img src="img/tmfl.png" alt="img" style="zoom:67%;" />
+
+**双绞线(Twisted-Pair Cable)**
+
+<img src="img/tpc.png" alt="img" style="zoom:80%;" />
+
+传的是**差分信号**，这样抗噪声能力强。就算有噪声，它对这两根线的影响也差不多，在接收方一减就能够把噪声减掉。
+
+还可以在上面加上屏蔽罩：
+
+<img src="img/stp.png" alt="img" style="zoom:67%;" />
+
+---
+
+**同轴电缆(Coaxial Cable)**
+
+<img src="img/cc.png" alt="img" style="zoom:67%;" />
+
+---
+
+**光纤(Fiber-Optic Cable)**
+
+光纤的原理其实就是**光的折射**：
+
+<img src="img/zs.png" alt="img" style="zoom:67%;" />
+
+因此只要我们找到这个**Critical Angle**，就能够在光缆中实现很多次的全反射，实现传输光波的功能。
+
+<img src="img/of.png" alt="img" style="zoom:67%;" />
+
+**==接下来是考点：光纤传播模式的分类==**
+
+<img src="img/pm.png" alt="img" style="zoom:67%;" />
+
+只要我的入射角 > Critical Angle，就能够实现全反射。那么我们可以找多个这样的角，然后让它们同时传输。这种传输方式因为角度是离散的，所以叫做**阶跃折射率模式(Step index)**。
+
+<img src="img/si.png" alt="img" style="zoom:67%;" />
+
+这种方式有个问题：如果入射角太大，光在中间里的那个空洞待着的时间太长还没碰到壁，就有可能会散出去，这样会有能量损失。
+
+为了解决这种问题，人们想出了一个办法：把中间那个空当变成一个芯儿，是一个**多层**的芯儿。有多少层呢？**无数层**！其实是一种函数关系，比如半径和折射率成反比这种。这样光在中间传播的时候，**时时刻刻**都会发生折射，从而形成一条**平滑**的曲线。这样就解决了长时间不碰壁发生发散的问题。显然这样的光有无数个折射率，这种方式叫做**渐进折射率模式(Graded Index)**。
+
+<img src="img/gi.png" alt="img" style="zoom:67%;" />
+
+以上两种方式共同的问题是：多个光线在一起会互相干扰。因此我们不如从根本入手，让光更集中。把中间那个芯儿做得非常非常细，有多细呢？**和光子的直径一样细**！这样就只能有一束光通过，同时对光路的保护也最好，根本没有发散的可能。这就是**单模(Single Mode)**。
+
+<img src="img/sm.png" alt="img" style="zoom:67%;" />
+
+## 8. Switching
+
+在1.9.2.2中介绍过Switched WAN，现在可以回忆一下。
+
+<img src="img/sn.png" alt="img" style="zoom:67%;" />
+
+而这种类型的网络也可以继续细分，这章就是分别去介绍它们。
+
+<img src="img/swf.png" alt="img" style="zoom:67%;" />
+
+### 8.1 Circuit-Switched Networks
+
+过去在使用电话的时候，通常是很多个电话连接到一个交换机，这样它们之间就能够通过交换机建立起连接。
+
+<img src="img/dh.png" alt="img" style="zoom:67%;" />
+
+如何实现这种交换呢？分为三个阶段：**Setup(建立连接)**, **Data-Transfer(通信)**和**Teardown(释放)**。
+
+这样的交换机在现在不可能只有一个。那么这样的一组交换机通过物理链路连接起来，就形成了**电路交换网络(Circuit-Switched Networks)。**而每条链路的带宽通常很宽，所以我们经常使用第6章**FDM**和**TDM**来进行复用。
+
