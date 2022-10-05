@@ -1549,6 +1549,12 @@ VCI就是上面所说的局限的地址，又叫做label。这是一个很小的
 
 其实这些服务在2.2.4的传输层中也有，只不过是控制node和node之间而不是end和end之间。
 
+### 10.3 DLC and MAC
+
+将数据链路层拆开，其实是由两个不同的层组成的。在介绍这个之前，我们要先介绍一下数据链路层的连接方式。数据链路层通常有两种连接，一种就是p2p，另一种就是broadcast。根据名字就能看出，看这个层和其它多少个层连接就能区分。而对于这两种不同的连接，会有不同的控制方式。其中p2p只需要Data link control(DLC)；而broadcast需要Data link control和Media access control(MAC)。
+
+<img src="img/mac.png" alt="img" style="zoom:67%;" />
+
 ## 11. Error Detection and Correction
 
 数据链路层其实就是包装一下的物理层，它肯定也能直接访问bit，所以我们从它提供的错误检测服务开始。
@@ -1567,3 +1573,87 @@ VCI就是上面所说的局限的地址，又叫做label。这是一个很小的
 
 ![img](img/xor.png)
 
+### 11.3 Error Detection
+
+#### 11.3.1 Hamming Distance
+
+Let us find the Hamming distance between two pairs of words.
+1. The Hamming distance d(000, 011) is 2 because (000 ⊕ 011) is 011 (两个1).
+2. The Hamming distance d(10101, 11110) is 3 because (10101 ⊕ 11110) is 01011 (三个1).
+
+#### 11.3.2 Minimum Hamming Distance
+
+在一个编码方案中所有的可能之间最小的Hamming Distance。比如，下面表中的最小海明距离：
+
+<img src="img/hdd.png" alt="img" style="zoom:67%;" />
+
+![img](img/hdd2.png)
+
+**结论：**
+
+* **如果你想要<u>检测</u>s个错，那你编码的最小海明距离d~min~ = s + 1。**
+* **如果你想要<u>纠正</u>t个错，那你编码的最小海明距离d~min~ = 2t + 1。**
+
+因此，对于一种编码方式，我们只要知道它的最小海明距离，就能算出它能检测多少错，纠正多少错。比如奇偶校验码，它的d~min~ = 2，所以s = 1，t = 0.5，也就是能检测1个bit错，纠正不了错。
+
+### 11.4 Cyclic Redundancy Check
+
+==考点：==CRC(循环冗余校验码)，这里贴出计组的笔记：
+
+![img](img/crc.png)
+
+![img](img/crc2.png)
+
+![img](img/crc3.png)
+
+## 12. Data Link Control
+
+无论是p2p还是broadcast，都需要用到DLC。所以我们首先讨论一下其中最重要的功能：Framing
+
+### 12.1 Framing
+
+#### 12.1.1 Character-oriented Framing
+
+在计算机中的数据通常有两种形式：字符型(字节型)和二进制型。而它们传递的方式也不同。在数据链路层中，对于字符型的处理通常是将几个字符捆到一起形成一个Frame。而在前面和后面都会加上一些东西：
+
+<img src="img/cop.png" alt="img" style="zoom:67%;" />
+
+* **Header中通常是source / destination address或者其他的控制信息**
+* **Trailer中通常是校验码的冗余位**
+* **Flag用来区分frame之间的区别，通常是8bit，<u>并且Flag并不是Frame的一部分！</u>**
+
+这里有一个问题，如果Frame中间含有Flag怎么办？人们想出了一种策略——**byte stuffing**。简单来说，就是转义字符，在含有Flag的数据前面插入一个Escape Character(ESC)，当接收方扫描到ESC时，就不会认为Flag是边界而是数据了。另外，如果数据中甚至包含ESC的话，就在前面再插一个ESC。
+
+如果我要打包成Frame的数据是这样的：
+
+<img src="img/bs.png" alt="img" style="zoom:67%;" />
+
+能看到，数据中有Flag，还有一个ESC。所以数据链路层会进行这样的打包：
+
+<img src="img/bs2.png" alt="img" style="zoom:67%;" />
+
+这样，在接收方接到之后，就能正确地将数据取出来：
+
+<img src="img/bs3.png" alt="img" style="zoom:67%;" />
+
+#### 12.1.2 Bit-oriented Framing
+
+有了上面的解释，面向bit的打包方式就很简单了：
+
+<img src="img/bo.png" alt="img" style="zoom:67%;" />
+
+相同的问题：数据中含有Flag怎么办？解决方法叫做**bit stuffing**。我们的Flag是`0 111111 0`，因此我们只需要让数据中**满足不含有6个连着的1**就可以了。解决方法就是，只要我发现了`0 11111`这种序列，就在它的后面插上0，不管它后面本来是不是0。在接收方将插入的这个0删除就可以了。
+
+<img src="img/bof.png" alt="img" style="zoom:67%;" />
+
+### 12.2 Flow / Error Control
+
+在10.2中提到过这两个功能，我们不谈功能，只说人们用什么方式去实现了这些功能。
+
+#### 12.2.1 Stop-and-Wait Protocol
+
+这种协议在流速控制和错误控制中都用到了。比如我作为发送方，我怎么知道对面到底收没收到我发的消息呢？如果没收到的话我还一个劲儿地发，那就炸了；如果这个数据在中途出错了(**比如Flag被噪音打掉**)，对面本来要让我重发，但我不知道要重发。为了解决这些问题，我们引入了一个机制：让接收方在收到消息后回头通知一下发送方。返回的这个消息叫做**ACK**：
+
+<img src="img/ack.png" alt="img" style="zoom:67%;" />
+
+这样在发送方发Frame之后，需要等待一下
