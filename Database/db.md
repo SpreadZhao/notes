@@ -1385,10 +1385,10 @@ revoke select on branch from U1, U2, U3;
 
 通常高级程序语言和数据库进行交流的方式有四种：
 
-* C lib，也就是c语言的库函数
-* 嵌入式sql，缺点是一个牌子的数据库就只能用一种语言，换数据库麻烦
+* C lib，也就是c语言的库函数。
+* 嵌入式sql，缺点是一个牌子的数据库就只能用一种语言，换数据库麻烦。
 * ODBC(Open Database Connectivity)，相当于所有数据库的虚函数。java的ODBC就叫做JDBC。缺点是这虚函数只能提供基本操作，对于一些牌子的数据库的特色功能是用不了的，因为要考虑所有的数据库。而且多了一层性能也会下降。
-* ORM(Object Relation Map)，将relation变成对象，这样开发容易很多
+* ORM(Object Relation Map)，将relation变成对象，这样开发容易很多。
 
 我们只讨论中间的两种
 
@@ -1425,7 +1425,7 @@ else printf("Creation failed\n");
 
 #### 5.1.2 Host Language Variables
 
-比如我想给一个学生增加余额，但是增加的这个数是在c语言中的一个变量，那么这个时候就用到主变量了。这种变量可以在c中访问，也可以在sql中访问。
+比如我想给一个学生增加余额，但是增加的这个数是在c语言中的一个变量，那么这个时候就用到**宿主变量**了。这种变量可以在c中访问，也可以在sql中访问。其实几乎所有嵌入式语言都会有宿主变量(参考嵌入式汇编)。
 
 ```c
 EXECL SQL update student
@@ -1433,7 +1433,7 @@ EXECL SQL update student
     where ID = 123;
 ```
 
-其中的`:haha`就是宿主变量。通常使用的时机就是：**在sql中要访问sql外部的变量**。宿主变量的声明也是有要求的，我们要把它们夹在两条语句之间：
+其中的`:haha`就是宿主变量。注意**只有在嵌入式SQL中宿主变量之前才需要加冒号，编程语言中不用**。通常使用的时机就是：**在sql中要访问sql外部的变量**。宿主变量的声明也是有要求的，我们要把它们夹在两条语句之间：
 
 ```c
 EXEC SQL BEGIN DECLARE SECTION;
@@ -1441,3 +1441,165 @@ EXEC SQL BEGIN DECLARE SECTION;
 EXEC SQL END DECLARE SECTION;
 ```
 
+在使用宿主变量时可能会出现一个问题：我拿到SQL中的一个值作为输出(比如某某人的工资)，将这个值作为宿主变量，这样就能拿到这个值在c中进行操作了。但是万一这个值是个空值咋办？**SQL中的空和编程语言中的空是完全不一样的**，SQL中表示的是不知道、没有值，而编程语言中通常是空指针、0之类的。因此我们需要一个机制来解决这个问题，这个机制就是接下来要讨论的**指示变量**。
+
+#### 5.1.3 Indicator Variables
+
+当SQL中的变量出现了上述问题时，我们要在它的后面紧跟一个指示变量。其中的值表示了这个宿主变量的状态：
+
+```c
+//声明宿主变量和它附属的指示变量
+EXEC SQL BEGIN DECLARE SECTION;
+	int age;
+	short ageInd;
+EXEC SQL END DECLARE SECTION;
+
+//给指示变量赋值，这表示宿主变量此时是空值。
+ageInd = -1;
+
+//这样就可以在嵌入式sql中将宿主变量设置为空值并赋值给属性了
+EXEC SQL update student
+    set age=:age:ageInd;
+	where ssn=2345;
+```
+
+指示变量通常有以下的值：
+
+* **0：合法的值，正常用**
+* **-1：空值**
+* \>0：特殊情况，暂且不提
+
+接下来给一个比较具体的例子来解释一下指示变量具体怎么用。首先定义各种宿主变量：
+
+```c
+EXEC SQL BEGIN DECLARE SECTION;
+	char ssn[6];
+	char name[16];
+	int age;
+	short ageInd;
+	char *username = "Manager/Manager";
+	char *connect_String = "College";
+EXEC SQL END DECLARE SECTION;
+```
+
+那么我们首先给`ssn`赋值：
+
+```c
+printf("Enter ssn number:");
+scanf("%d", ssn);
+```
+
+然后按着这个`ssn`去数据库中寻找学号就是这个变量的tuple信息：
+
+```c
+EXEC SQL select ssn, name, age
+    into :ssn, :name, :age:ageInd
+    from student
+    where ssn=:ssn;
+```
+
+这句话的意思就是从student表中寻找`ssn`是`:ssn`的tuple，并将结果赋值给into句子中的三个变量，**其中age是有可能为空的**。而这里又会出现另一个问题：在本例中，我们select语句的结果只能是一个tuple，因为我们就准备了那么些变量。如果出现多个tuple，肯定就会报错。而有些时候，我们就是要选出多个tuple，那么我们该怎么讲这些tuple赋值到into中的这些变量里呢？这个时候，**游标**就该排上用场了。
+
+#### 5.1.4 Cursors
+
+当SQL返回了多个tuple时，我们能想象到，这其实就是一个大的表格，每一行对应一个tuple，每一列对应一个属性。而这整个表格其实就是一段连续的内存空间。**我们的游标就是指向这段空间的首地址**：
+
+![img](img/cur.png)
+
+而游标的思路就是：我利用当前游标指向的空间，取出来的就是当前的tuple，去赋值给into中的宿主变量去做一些c语言之类的逻辑处理。当处理完之后，游标会自动指向第二个tuple。这样循环下去直到末尾，整个的结构就处理完了。需要注意的是，**游标的名字在一个数据库中要是唯一的**，因为多个程序可能会建立在同一个数据库上，它们会使用相同的游标。
+
+#### 5.1.5 Example
+
+接下来通过一个完整的例子来完善一下5.1.x中的内容。
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+EXEC SQL INCLUDE sqlca;
+
+int main(){
+    EXEC SQL BEGIN DECLARE SECTION;
+    	char ssn[6];
+    	char name[16];
+    	int age;
+    	short ageInd;
+    	char *username = "Manager/Manage";
+    	char *connect_String = "College";
+    EXEC SQL END DECLARE SECTION;
+    
+    //连接到数据库，不同数据库语法不同，看个乐呵即可
+    EXEC SQL connect :username using :connect_String;
+    //使用SQLCA中的状态判断连接是否成功
+    if(sqlca.sqlcode < 0) exit(-1);
+    
+    /*
+    	上面这种sqlcode异常判断其实很繁琐，如果很多嵌入式语句的话，
+    	出一次错就要判断一次，代码量很大。因此为了简化操作，我们使
+    	用声明性的异常处理。
+    */
+    EXEC SQL whenever sqlerror goto error;	// sqlcode < 0
+    EXEC SQL whenever not found goto done;	// sqlcode = 1403
+    
+    //从student表中选出name是:name的所有tuple，按学号排序后投影出ssn,name,age三列，
+    //并将最后的结果(1个或多个tuple)整个拿出来，并声明游标studentCursor备用
+    EXEC SQL declare studentCursor cursor for
+        select ssn, name, age
+        from student
+        where name = :name
+        order by ssn;
+    
+    //open函数打开游标，并将从数据库中取出的多个tuple整个放到缓冲区中，准备逐行操作。
+    EXEC SQL open studentCursor;
+    
+    //逐行操作，这里使用for循环，当出现没有找到时，上面声明的异常处理就起作用了。
+    for(;;){
+        /*
+        	fetch语句的语法是这样的：
+        		fetch [next|prior|first|last] [from] c
+        		into :s1 :s2
+        	理解起来很简单，就是将当前tuple中的属性提取出来逐个复制到into中，
+        	并移动cursor。移动的规则由第一个参数指定，默认是next。
+        */
+        EXEC SQL fetch studentCursor
+        into :ssn, :name, :age:ageInd;
+        
+        printf("Student number: %s\n", ssn);
+        printf("Name: %s", name);
+        
+        //对指示变量判断来看age是否为空。
+        if(ageInd < 0) printf("age: null\n");
+        else printf("age: %d", age);
+    }
+    
+    //异常处理
+    error:	
+    	printf("SQL error %d\n", sqlca.sqlcode);
+    	goto finished;
+    done:
+    /*
+    	由于同一个游标在数据库中会被多个程序使用，因此不同程序在使用的时候需要
+    	做到“用完归还”。也就是出现异常的时候需要先恢复到未出异常的时候，再关闭
+    	自己的程序。在这里就是sqlerror continue语句。
+    */
+    	EXEC SQL whenever sqlerror continue;
+    	EXEC SQL close studentCursor;	//关闭游标
+    	EXEC SQL commit work release;
+}
+```
+
+### 5.2 ODBC
+
+使用了ODBC之后，数据库和APP的交互就变成了这样：
+
+```mermaid
+graph TD
+APP1 & APP2 & APP3 --> ODBC
+ODBC --> driver1
+ODBC --> driver2
+ODBC --> driver3
+driver1 --> DB1
+driver2 --> DB2
+driver3 --> DB3
+```
+
+这样做会带来两个后果，在第5章的开头已经提到过了。但是这样做确实很大降低了开发的难度，甚至最底层的都可以不是数据库。比如DB3不是MySQL，不是Oracle，是一个xlsx表格，甚至是一个txt文本，一样也可以像访问数据库一样通过ODBC来访问这些文件。
