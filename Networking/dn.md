@@ -686,7 +686,7 @@ $$
 
 * **Transmission time**
 
-比如第一个bit，它到达目的地后，所用的时间就是上面的Propagation time。但是，这时候信息传完了吗？显然没有！后面还有一串等着呢。所以等最后一个bit到达之后才算结束。那么我们想想，在第一个bit到达目的地时开始计时，在最后一个bit到达目的地后结束计时。这一段时间就是整个消息流过的时间，也就是Transmission time。很显然，计算这个就看**整个消息有多少bit**和我**每秒能传多少bit**，然后再一除。
+发送时间。比如第一个bit，它到达目的地后，所用的时间就是上面的Propagation time。但是，这时候信息传完了吗？显然没有！后面还有一串等着呢。所以等最后一个bit到达之后才算结束。那么我们想想，在第一个bit到达目的地时开始计时，在最后一个bit到达目的地后结束计时。这一段时间就是整个消息流过的时间，也就是Transmission time。很显然，计算这个就看**整个消息有多少bit**和我**每秒能传多少bit**，然后再一除。
 $$
 Transmission\ time = \frac{Message\ size}{Bit\ Rate} = \frac{Message\ size(bit)}{Bandwidth(bit/s)}
 $$
@@ -1618,7 +1618,7 @@ Let us find the Hamming distance between two pairs of words.
 
 <img src="img/cop.png" alt="img" style="zoom:67%;" />
 
-* **Header中通常是source / destination address或者其他的控制信息**
+* **Header中通常是source / destination address和其他的控制信息**
 * **Trailer中通常是校验码的冗余位**
 * **Flag用来区分frame之间的区别，通常是8bit，<u>并且Flag并不是Frame的一部分！</u>**
 
@@ -1656,4 +1656,43 @@ Let us find the Hamming distance between two pairs of words.
 
 <img src="img/ack.png" alt="img" style="zoom:67%;" />
 
-这样在发送方发Frame之后，需要等待一下
+这样在发送方发Frame之后，需要等待一下。当发送方接收到接收方传回来的ACK时，证明本次发送完美成功，于是开始发下一个Frame。那么如果Frame在中途丢失改怎么办呢？甚至是传回来的ACK也有可能在中途丢失，这个时候又改怎么办呢？这里就要引入一个自动重传技术——**Automatic Repeat Request(ARQ)**。在发送方上挂一个时钟(**Timeout Timer**)，如果长时间没有收到接收方的ACK，就自动重新传这个Frame：
+
+<img src="img/arq.png" alt="img" style="zoom:67%;" />
+
+上图中有一个问题，就是最后一个Frame发了两次，接收方也接收了两次。为了避免总发这些和重复的帧，引入了两个编号，叫做**Sequence Number**和**Acknowledgement Number**。比如我在发第0个Frame，那么我就把这个Frame编号为0，当接收方收到之后，就这样说：我收到0了，你发1吧。因此接收方会将ACK编为1之后发送给发送方。当发送方接收到ACK后，知道了我接下来要发开头是1的Frame了，于是就这样一直下去……
+
+需要注意的是，因为通常双方之间只有一个Frame在活动，所以我们不需要很大的Frame，因此SN和AN通常都是0101这样的交替序列。而在一些特殊情况(**Go-Back-N ARQ**)的时候，才会使用多个编号，但也一定是一个循环的序列。比如0101是模2的序列，那么012012这种就是模3的序列(**`next(n) = (n + 1) % 3`**)……当加入了SN和AN之后，就会是这样的：
+
+<img src="img/snan.png" alt="img" style="zoom:67%;" />
+
+在3.6.3中讲过传输过程中的时延，现在来讨论一下ARQ系统中的时延。我们只讨论传播时间和发送时间，不讨论其他的。另外，由于ACK很小(通常只有1bit)，所以它的发送时间也不记。我们令**Frame的发送时间为t~f~，Frame和ACK的传播时间都为t~p~**，这样就能得到总体的利用率：
+$$
+U=\frac{t_f}{2t_p+t_f}
+$$
+结合着3.6.3，我们先来理解一下这个式子。首先，对于一个frame，它从起点发送到终点，要经过这两个时间：
+$$
+t_f+t_p
+$$
+而我们认为，其中的t~p~是Propagation Time，也就是bit在介质中经过的时间。而t~f~是这一串bit从开始发到完全进入介质的时间。我们认为：t~f~在两者间的比重占得越大，利用率也就越高。因为t~p~越小，就代表我这坨bit只要完全离开发送方，就能马上到达接收方，在空中停留的时间也就越久，这样**中间得管道肯定塞得更满**，利用率也就越高。因此如果没有ACK的话，我们的利用率本来是这样的：
+$$
+U^*=\frac{t_f}{t_f+t_p}
+$$
+但是在加入了ACK之后，它的Propagation Time和Transmission Time都是附加产物，都不是我们想要的，所以它们理应也放在分母上。但是由于Transmission Time只有一个bit，所以非常小。因此只加了一个t~p~，最终就变成了这个样子。
+
+为了让计算更简单一点，我们令**a = t~p~ / t~f~**，然后让分子分母同时除以t~f~，就能得到：
+$$
+U=\frac{1}{2a+1}
+$$
+
+> 例：一个停等ARQ系统，带宽是1Mbps，传播时间20ms，帧长度1000bit，则带宽时延积是多少？利用率又是多少？
+>
+> 在3.6.4中介绍的就是带宽时延积，因此我们要将带宽乘以总体的时延(本题忽略了t~p~)：
+> $$
+> (1 \times 10^6) \times (20 \times 10^{-3})=20000\ bits
+> $$
+> 然后这里计算利用率的话，就不能用t~p~ / t~f~了，因为根本都没给，所以我们从另一个角度讨论利用率：用帧的长度除以整个通道能容纳的总长度不就是利用率吗？只不过上面的是从时间的角度，本题是从容量的角度。因此利用率就是：
+> $$
+> 1000 / 20000=5\%
+> $$
+
