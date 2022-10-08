@@ -1603,3 +1603,113 @@ driver3 --> DB3
 ```
 
 这样做会带来两个后果，在第5章的开头已经提到过了。但是这样做确实很大降低了开发的难度，甚至最底层的都可以不是数据库。比如DB3不是MySQL，不是Oracle，是一个xlsx表格，甚至是一个txt文本，一样也可以像访问数据库一样通过ODBC来访问这些文件。
+
+### 5.3 Functions and Procedures
+
+比如我们要做在ATM中取钱的服务，就需要对服务器数据库进行这样的判定：首先看用户密码是否输入正确，再看他要取的钱是否小于等于他的存款。只有都满足，才能进行取钱的操作。而这两次判定我们通常有两种解决方式。一种是将所有的判定放到高级程序语言中，比如在c中判断密码是否正确，正确怎么样，不正确怎么样。但是这样做有一个缺点，就是当整个业务逻辑需要修改的时候，需要改的地方太多了。所以我们需要另一种方式，也就是将所有的过程性语句放到数据库中，而这样做的好处就是只需要修改数据库，那么和它关联的所有程序的逻辑也就都修改了。但是我们之前学的SQL中从来没有if else这样的判断，所以我们在本节所介绍的**函数**和**过程**以及下一节介绍的**触发器**就是这样的东西。
+
+使用了这种方式之后，我们的取钱逻辑就是这样的：用户APP发出一次取钱的请求，而这个请求就是数据库提供的接口。数据库接到这个请求后，通过**在其内部实现的**业务逻辑来判断密码是否正确，余额是否够用等等。而不是像以前一样在APP中去判断这这些。
+
+首先我们先来通过一个例子认识一下Procedure
+
+```sql
+# 声明结束符是//，只有遇到这个的时候才结束语句，分号不算
+delimiter //
+
+create procedure citycount(IN country char(3), out cities int)
+begin
+	select count(*)
+	into cities
+	from world.city
+	where CountryCode = country;
+# 此时遇到//，结束语句
+end//
+
+# 将结束符声明回分号
+delimiter ;
+```
+
+这个过程的名字是`citycount`，有两个参数：`country`和`cities`。其中前者是输入变量，后者是输出变量。也就可以类比成函数的形参和返回值。在函数中我们执行`select`语句，从`world.city`表中查找`CountryCode`是`country`的tuple，并将tuple的个数作为值写入变量`cities`中，这样，我们就可以调用这个过程了：
+
+```sql
+call citycount('JPN', @cities);
+```
+
+这样，变量`@cities`中就存好了上述的结果，也就是tuple的个数，然后通过`select`语句就能显示出来：
+
+![img](img/pro.png)
+
+---
+
+接下来我们再通过一个例子看一看函数的使用：
+
+```sql
+create function ins_count(dept_name varchar(20))
+	returns integer
+begin
+	declare i_count integer;
+	select count(*)
+	into i_count
+	from instructor
+	where instructor.dept_name = dept_name
+	return i_count;
+end
+```
+
+这个函数名字叫`ins_count`，参数是`dept_name`，也就是学院的名字。返回值是一个整数。做的事情就是从`instructor`表中寻找学院名字是参数中值的tuple，并记录tuple的个数(**instructor的个数**)，将这个值写入到临时变量`i_count`中，并将它作为返回值返回给函数外部。因此我们可以在任何地方使用这个函数，**包括sql语句中**：
+
+```sql
+select dept_name, budget
+from department
+where ins_count(dept_name) > 12
+```
+
+这条语句是从`department`表中寻找，对于每一个`dept_name`都要逐个判断，只要这个学院里有的`instructor`大于12个，就被选中了，最后显示出这些学院的名字和预算。而如果我们不适用函数的话，那么函数那部分就要整体替换成上面那函数中一坨select语句，很明显这种写法让代码量大大降低，也更好理解和扩展。
+
+---
+
+除了这些控制语句，以及`declare`这种声明变量的语句，还必须要有一些`if else`这样的语句：
+
+```sql
+create function verboseCompare(n int, m int)
+	returns varchar(50)
+	
+	begin
+		declare s varchar(50);
+		
+		if n = m then set s = 'equals';
+		else
+			if n > m then set s = 'greater';
+			else set s = 'less';
+			end if;
+			
+			set s = concat('is ', s, ' than');
+		end if;
+		
+		set s = concat(n, ' ', s, ' ', m, '.');
+		
+		return s;
+	end
+```
+
+这是一个很简单的比较大小的函数。比如n < m的话，首先定义变量s用作返回，然后走第一个分支，显然$n \neq m$，所以会走else分支，然后n不大于m，所以接着走else分支，这样s就变成了less。之后在s的前后拼一下，就变成了`is less than`。然后再将s拼一下，就变成了`n is less than m.`，最终将这个字符串返回。
+
+另外还有`case`，`loop`，`while`，`repeat`语句，这些举一反三即可。
+
+### 5.4 Trigger
+
+触发器的使用通常并不是为了实现什么功能，而是为了实现完整性约束。比如我对数据库执行一个操作，但是这个操作必须要在特定的时间内才能做。这个时候就需要用触发器来判断时间是否合理。
+
+```sql
+create table account(
+	acct_num int,
+    amount decimal(10, 2)
+);
+
+create trigger ins_sum
+before insert
+on account
+for each row set @sum = @sum + NEW.amount
+```
+
+每一个触发器都和一个表相关。比如在这里，`ins_sum`触发器就和`account`表相关。每当我们对这张表执行`insert`语句之前，都要先将账户的总数加上新的数量，然后再插入。其中第二行的`before`也可以换成`after`表示在执行后面的操作之后才执行触发器。
