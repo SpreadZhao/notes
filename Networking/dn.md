@@ -1642,7 +1642,7 @@ Let us find the Hamming distance between two pairs of words.
 
 <img src="img/bo.png" alt="img" style="zoom:67%;" />
 
-相同的问题：数据中含有Flag怎么办？解决方法叫做**bit stuffing**。我们的Flag是`0 111111 0`，因此我们只需要让数据中**满足不含有6个连着的1**就可以了。解决方法就是，只要我发现了`0 11111`这种序列，就在它的后面插上0，不管它后面本来是不是0。在接收方将插入的这个0删除就可以了。
+相同的问题：数据中含有Flag怎么办？解决方法叫做**bit stuffing**。我们的Flag是`0 111111 0`，因此我们只需要让数据中**满足不含有6个或以上连着的1**就可以了。解决方法就是，只要我发现了`0 11111`这种序列，就在它的后面插上0，不管它后面本来是不是0。在接收方将插入的这个0删除就可以了。
 
 <img src="img/bof.png" alt="img" style="zoom:67%;" />
 
@@ -1696,3 +1696,106 @@ $$
 > 1000 / 20000=5\%
 > $$
 
+### 12.3 High-level Data Link Control
+
+12.2.1中所介绍的ARQ协议在国际中是有标准的，其中一种就是HDLC。这种协议属于上世纪60年代的产物，现在已经有些过时了。HDLC是一个面向bit的协议，也就是12.1.2中的内容。
+
+HDLC定义了两种传输模式，分别是**Normal Response Mode(NRM)**和**Asynchronous Balanced Mode(ABM)**，其中前者是我们很久以前使用计算机的方式，后者是我们如今使用计算机的方式。
+
+#### 12.3.1 Normal Response Mode
+
+在NRM中，分为Primary Station(主站)和Secondary Station(从站)。它们之间的关系，在操作系统的笔记中8.3介绍Terminal的时候提到过。以前因为计算机很昂贵，都是多人使用一个。这个计算机建在机房中，而每个用户只有一个键盘鼠标显示器，并没有CPU之类的。这些东西组成一个终端，通过远程去访问那个昂贵的计算机。这个计算机就是主站，而用户的键鼠就是从站。
+
+主站所发出的Frame叫做Command，而从站发出的Frame叫做Response。因此它们之间的通信可以是p2p，也可以是Multipoint Links：
+
+<img src="img/nrm.png" alt="img" style="zoom:67%;" />
+
+#### 12.3.2 Asynchronous Balanced Mode
+
+如今的计算机全部都有CPU，所以它们之间如果不人为规定的话，很难有主从的区分。所以我们如今的通信基本上全部是在peer上的。对于双方，它们随时都能发送命令，也能发送相应。所以这种方式是异步的：
+
+<img src="img/abm.png" alt="img" style="zoom:67%;" />
+
+#### 12.3.3 HDLC Frames
+
+接下来我们看一看，在HDLC中发送的这些Frame都是怎么编排的。它们其实和12.1.2中的结构如出一辙。
+
+* Information Frame
+
+  I-frame就是用户发送的带有数据的Frame，比如从网上下载的数据包。
+
+  ![img](img/if.png)
+
+  FCS是Frame Check Sequence，也就是纠错码。
+
+* Supervisory Frame
+
+  S-frame不传数据传应答，比如之前介绍的ACK。
+
+  ![img](img/sff.png)
+
+以上的两种都是有编号的帧，也就是12.2.1中的模2序列。这些编号就存储在Control段中；而接下来介绍的U-frame就没有这种编号。
+
+* Unnumbered Frame
+
+  这种帧主要是在建立连接、拆除连接的时候发送，其中是一些管理类型的数据。
+
+  ![img](img/uf.png)
+
+如何区分这三种Frame呢？根据**Control段**的前两个bit就可以：
+
+<img src="img/isu.png" alt="img" style="zoom:67%;" />
+
+### 12.4 Point-to-Point Protocol
+
+相比于HDLC，这是一种面向byte的方式，同时也是我们正在用的方式。PPP协议实际上是HDLC的子集，它将HDLC中的细节进行了简化。另外，PPP协议并不止在数据链路层，在很多层都有它的影子。
+
+需要注意的是，PPP并没有提供Flow Control，并且它的Error Control也非常简单，就是一个CRC，如果数据出错了，那就不管了，由更上层的协议来管。
+
+#### 12.4.1 PPP Framing
+
+首先看一下PPP是怎么打包Frame的：
+
+<img src="img/pppf.png" alt="img" style="zoom:67%;" />
+
+我们能看到，在两个Flag中间，多了许多新面孔：
+
+* Address，常量`11111111`，用作广播的地址。
+* Control，常量`11000000`。
+* Protocol，大小默认2个字节，规定了数据段要传什么，双方一人用一个字节。
+* Payload field，这就是数据段。最大容量1500字节，但是有时候也能再扩一扩。通常要留一些空。
+* FCS，2个字节或者4个字节的CRC。
+
+**需要注意的是，在12.1.1中提到过的转义的事情，这里也有。而PPP中的ESC是`01111101`**。
+
+## 13. Media Access Control
+
+这个其实就是Multiple-access Control，它的协议分为三组：
+
+<img src="img/macc.png" alt="img" style="zoom:67%;" />
+
+### 13.1 ALOHA
+
+#### 13.1.1 Pure ALOHA
+
+在这种协议中，只要想传Frame就传。但是，如果是多个人的话，会产生一些问题：
+
+<img src="img/coll.png" alt="img" style="zoom:67%;" />
+
+当多个人同时传的之后，就可能产生撞车的情况。所以我们需要一些手段来避免它。之前我们说，当发送方有一段时间没收到ACK的时候，会自动重传。但是这里有个问题：如果两个人同时发送，并在中途撞车，那么他们肯定都收不到ACK，那么如果这个时候俩人又都同时重传，结果肯定还是撞车。所以我们需要一种算法来**让它们随机地进行重传**。
+
+<img src="img/aloha.png" alt="img" style="zoom:67%;" />
+
+我们能看出来，K越大，代表撞车的次数越多，那么在选择R的时候，能选择的范围也就越大。那么等待的时间也就会**越随机**；而如果没碰撞几次，那么等待的时间相对来说也就**越固定**。而撞车次数大于K~max~之后，就开摆！
+
+这种算法有一个很致命的问题：LIFO。因为比如有一个帧最先进去，在里面撞车了。撞完车之后又来了好多好多其它的帧，于是不停地撞车，同时等待的时间也很可能越来越长，以至于最后一个才被送到。
+
+#### 12.1.2 Slotted ALOHA
+
+不随机，分时隙：
+
+<img src="img/sa.png" alt="img" style="zoom:67%;" />
+
+### 13.2 Carrier Sense Multiple Access
+
+ALOHA多数是建在空气中的，所以我们并不能探测传输的过程中是否有其它帧。而CSMA是建立在电缆上的。通过监听电缆，我们就能发现在其中传播的数据。
