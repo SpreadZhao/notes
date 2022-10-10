@@ -1709,7 +1709,34 @@ create table account(
 create trigger ins_sum
 before insert
 on account
-for each row set @sum = @sum + NEW.amount
+for each row set @sum = @sum + new.amount
 ```
 
 每一个触发器都和一个表相关。比如在这里，`ins_sum`触发器就和`account`表相关。每当我们对这张表执行`insert`语句之前，都要先将账户的总数加上新的数量，然后再插入。其中第二行的`before`也可以换成`after`表示在执行后面的操作之后才执行触发器。
+
+触发器分为语句触发器和行触发器。其中默认就是语句触发器，所以`for each row`要显示声明。这些触发器执行的顺序是这样的：
+
+<img src="img/ts.png" alt="img" style="zoom:67%;" />
+
+另外，`old`和`new`是两个关键字，只和行触发器有关。分别表明当前修改之前的tuple和修改后的tuple。在使用这些时，需要注意一个问题：
+
+```sql
+delimiter //
+create trigger upd_check after update on account
+for each row
+begin
+	if new.amount < 0
+		then set new.amount = 0;
+	elseif new.amount > 100
+		then set new.amount = 100;
+	end if;
+end;//
+delimiter ;
+```
+
+这里有一个问题：after触发器是在执行完update操作之后进行的。而如果我们在update操作中将amount改成了-1，那么这里触发器是否还会将amount改成0？答案是否定的。因为已经对行记录进行了修改，我们就不再允许对`new`中的属性进行修改。相对的，我们在before触发器中也不能够修改`old`中的属性。
+
+还有一些情况中，我们只想对部分行记录使用触发器，那么就要在`for each row`中加入二次判定：
+
+<img src="img/ter.png" alt="img" style="zoom:67%;" />
+
